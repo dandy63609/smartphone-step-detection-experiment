@@ -1,4 +1,14 @@
+import '../evaluation/step_count_evaluation.dart';
 import '../models/experiment_models.dart';
+
+const sensorDataHeader =
+    'recording_id,sample_index,timestamp_ns,activity,phone_placement,'
+    'ax_mps2,ay_mps2,az_mps2,magnitude_mps2';
+
+const evaluationSummaryHeader =
+    'recording_id,trial_number,activity,phone_placement,algorithm,'
+    'ground_truth_steps,predicted_steps,absolute_error_steps,'
+    'percentage_margin_of_error';
 
 String csvCell(Object? value) {
   final text = '${value ?? ''}';
@@ -7,79 +17,49 @@ String csvCell(Object? value) {
       : text;
 }
 
-String sensorCsv(Iterable<SensorSample> samples) {
-  final rows = <String>[
-    'recording_id,sample_index,timestamp_ns,ax_mps2,ay_mps2,az_mps2,magnitude_mps2',
-  ];
-  for (final sample in samples) {
-    rows.add(
-      [
-        sample.recordingId,
-        sample.sampleIndex,
-        sample.timestampNs,
-        sample.axMps2,
-        sample.ayMps2,
-        sample.azMps2,
-        sample.magnitudeMps2,
-      ].map(csvCell).join(','),
-    );
+/// `sensor_data.csv`: raw samples for every recording (AGENTS.md §11.1).
+String sensorDataCsv(Iterable<SavedRecording> recordings) {
+  final buffer = StringBuffer('$sensorDataHeader\n');
+  for (final recording in recordings) {
+    final activity = recording.config.activity.value;
+    final placement = recording.config.phonePlacement.value;
+    for (final sample in recording.samples) {
+      buffer.writeln(
+        [
+          recording.recordingId,
+          sample.sampleIndex,
+          sample.timestampNs,
+          activity,
+          placement,
+          sample.axMps2,
+          sample.ayMps2,
+          sample.azMps2,
+          sample.magnitudeMps2.toStringAsFixed(3),
+        ].map(csvCell).join(','),
+      );
+    }
   }
-  return '${rows.join('\n')}\n';
+  return buffer.toString();
 }
 
-String detectedStepsCsv({
-  required String recordingId,
-  required String algorithm,
-  required Iterable<DetectionEvent> detections,
-  required AlgorithmParameters parameters,
-}) {
-  final rows = <String>[
-    'recording_id,algorithm,detection_id,peak_timestamp_ns,output_timestamp_ns,threshold_at_detection_mps2,processing_duration_ms,sample_index,algorithm_parameters',
-  ];
-  for (final detection in detections) {
-    rows.add(
+/// `evaluation_summary.csv`: one row per recording × algorithm
+/// (AGENTS.md §11.2).
+String evaluationSummaryCsv(Iterable<StepCountResult> results) {
+  final buffer = StringBuffer('$evaluationSummaryHeader\n');
+  for (final r in results) {
+    buffer.writeln(
       [
-        recordingId,
-        algorithm,
-        detection.detectionId,
-        detection.peakTimestampNs,
-        detection.outputTimestampNs,
-        detection.thresholdMps2,
-        detection.processingDurationMicros / 1000,
-        detection.sampleIndex,
-        parameters.json,
+        r.recordingId,
+        r.trialNumber,
+        r.activity.value,
+        r.phonePlacement.value,
+        r.algorithm.value,
+        r.groundTruthSteps,
+        r.predictedSteps,
+        r.absoluteErrorSteps,
+        r.marginOfErrorPercent.toStringAsFixed(2),
       ].map(csvCell).join(','),
     );
   }
-  return '${rows.join('\n')}\n';
-}
-
-String evaluationCsv(Iterable<EvaluationResult> results) {
-  final rows = <String>[
-    'recording_id,algorithm,ground_truth_count,predicted_count,tp,fp,fn,precision,recall,f1_score,absolute_count_error,signed_count_error,percentage_count_error,median_detection_latency_ms,mean_detection_latency_ms,p95_detection_latency_ms,matching_tolerance_ms',
-  ];
-  for (final result in results) {
-    rows.add(
-      [
-        result.recordingId,
-        result.algorithm,
-        result.groundTruthCount,
-        result.predictedCount,
-        result.truePositives,
-        result.falsePositives,
-        result.falseNegatives,
-        result.precision,
-        result.recall,
-        result.f1,
-        result.absoluteCountError,
-        result.signedCountError,
-        result.percentageCountError,
-        result.medianLatencyMs,
-        result.meanLatencyMs,
-        result.p95LatencyMs,
-        result.matchingToleranceMs,
-      ].map(csvCell).join(','),
-    );
-  }
-  return '${rows.join('\n')}\n';
+  return buffer.toString();
 }

@@ -5,96 +5,136 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/experiment_models.dart';
 
-class RecordingRepository {
+/// Builds the next `REC_YYYYMMDD_NNN` ID for [date], continuing from the
+/// IDs already used that day.
+String nextRecordingId(Iterable<String> existingIds, DateTime date) {
+  final day =
+      '${date.year.toString().padLeft(4, '0')}'
+      '${date.month.toString().padLeft(2, '0')}'
+      '${date.day.toString().padLeft(2, '0')}';
+  final pattern = RegExp('^REC_${day}_(\\d{3,})\$');
+  var highest = 0;
+  for (final id in existingIds) {
+    final match = pattern.firstMatch(id);
+    if (match != null) {
+      final n = int.parse(match.group(1)!);
+      if (n > highest) highest = n;
+    }
+  }
+  return 'REC_${day}_${(highest + 1).toString().padLeft(3, '0')}';
+}
+
+String recordingToJson(SavedRecording recording) => jsonEncode({
+  'recording_id': recording.recordingId,
+  'created_at': recording.createdAt.toIso8601String(),
+  'config': recording.config.toMap(),
+  'live_step_count': recording.liveStepCount,
+  'replay_detections': {
+    for (final entry in recording.replayDetections.entries)
+      entry.key.value: [for (final e in entry.value) e.toMap()],
+  },
+  'samples': [for (final s in recording.samples) s.toMap()],
+});
+
+SavedRecording recordingFromJson(String source) {
+  final root = jsonDecode(source);
+  if (root is! Map<String, dynamic>) {
+    throw const FormatException('Recording JSON must be an object.');
+  }
+  final id = root['recording_id']?.toString() ?? '';
+  if (id.isEmpty) throw const FormatException('Recording ID is missing.');
+  final config = root['config'];
+  if (config is! Map<String, dynamic>) {
+    throw const FormatException('Recording config is missing.');
+  }
+  final replay = <ThresholdAlgorithm, List<DetectionEvent>>{};
+  final rawReplay = root['replay_detections'];
+  if (rawReplay is Map<String, dynamic>) {
+    for (final entry in rawReplay.entries) {
+      replay[ThresholdAlgorithmLabel.parse(entry.key)] = [
+        for (final row in entry.value as List)
+          DetectionEvent.fromMap(row as Map<String, dynamic>),
+      ];
+    }
+  }
+  return SavedRecording(
+    recordingId: id,
+    createdAt:
+        DateTime.tryParse(root['created_at']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0),
+    config: ExperimentConfig.fromMap(config),
+    liveStepCount: (root['live_step_count'] as num?)?.toInt() ?? 0,
+    replayDetections: replay,
+    samples: [
+      for (final row in (root['samples'] as List? ?? const []))
+        SensorSample.fromMap(id, row as Map<String, dynamic>),
+    ],
+  );
+}
+
+/// Local persistence for recordings.
+abstract class RecordingStore {
+  Future<List<SavedRecording>> list();
+
+  /// Saves a new recording. Fails if the ID already exists, so raw data is
+  /// never overwritten.
+  Future<void> save(SavedRecording recording);
+
+  Future<String> nextId(DateTime date);
+}
+
+/// Stores each recording as a JSON file in the app documents folder.
+class FileRecordingStore implements RecordingStore {
+  FileRecordingStore({Future<Directory> Function()? directory})
+    : _directory = directory ?? _defaultDirectory;
+
+  final Future<Directory> Function() _directory;
+
+  static Future<Directory> _defaultDirectory() async {
+    final base = await getApplicationDocumentsDirectory();
+    return Directory('${base.path}/step_recordings');
+  }
+
+  @override
   Future<List<SavedRecording>> list() async {
     final directory = await _directory();
-    if (!await directory.exists()) {
-      return const [];
-    }
+    if (!await directory.exists()) return const [];
     final recordings = <SavedRecording>[];
     await for (final entity in directory.list()) {
-      if (entity is! File || !entity.path.endsWith('.json')) {
-        continue;
-      }
+      if (entity is! File || !entity.path.endsWith('.json')) continue;
       try {
-        recordings.add(fromJson(await entity.readAsString()));
-      } on FormatException {
-        // Ignore malformed files; raw data is never overwritten.
+        recordings.add(recordingFromJson(await entity.readAsString()));
+      } on Object {
+        // Skip unreadable files; they are left untouched on disk.
       }
     }
     recordings.sort((a, b) => b.recordingId.compareTo(a.recordingId));
     return recordings;
   }
 
-  Future<SavedRecording> load(String recordingId) async {
+  @override
+  Future<void> save(SavedRecording recording) async {
     final directory = await _directory();
-    final file = File('${directory.path}/$recordingId.json');
-    if (!await file.exists()) {
-      throw StateError('Recording $recordingId was not found.');
+    await directory.create(recursive: true);
+    final file = File('${directory.path}/${recording.recordingId}.json');
+    if (await file.exists()) {
+      throw StateError(
+        'Recording ${recording.recordingId} already exists; '
+        'raw recordings are immutable.',
+      );
     }
-    return fromJson(await file.readAsString());
+    await file.writeAsString(recordingToJson(recording), flush: true);
   }
 
-  Future<Directory> _directory() async {
-    final base = await getApplicationDocumentsDirectory();
-    return Directory('${base.path}/step_recordings');
-  }
-
-  SavedRecording fromJson(String source) {
-    final root = jsonDecode(source);
-    if (root is! Map<String, dynamic>) {
-      throw const FormatException('Recording JSON must be an object.');
-    }
-    String text(String key) => root[key]?.toString() ?? '';
-    int number(String key) => (root[key] as num?)?.toInt() ?? 0;
-    final id = text('recording_id');
-    if (id.isEmpty) {
-      throw const FormatException('Recording ID is missing.');
-    }
-    final samples = <SensorSample>[
-      for (final row in (root['samples'] as List? ?? const []))
-        if (row is Map<String, dynamic>)
-          SensorSample(
-            recordingId: id,
-            sampleIndex: (row['sample_index'] as num?)?.toInt() ?? 0,
-            timestampNs: (row['timestamp_ns'] as num?)?.toInt() ?? 0,
-            axMps2: (row['ax_mps2'] as num?)?.toDouble() ?? 0,
-            ayMps2: (row['ay_mps2'] as num?)?.toDouble() ?? 0,
-            azMps2: (row['az_mps2'] as num?)?.toDouble() ?? 0,
-          ),
+  @override
+  Future<String> nextId(DateTime date) async {
+    final directory = await _directory();
+    if (!await directory.exists()) return nextRecordingId(const [], date);
+    final ids = <String>[
+      await for (final entity in directory.list())
+        if (entity is File && entity.path.endsWith('.json'))
+          entity.uri.pathSegments.last.replaceAll('.json', ''),
     ];
-    final detections = <String, List<DetectionEvent>>{};
-    final results = root['algorithm_results'];
-    if (results is Map<String, dynamic>) {
-      for (final entry in results.entries) {
-        final rows = entry.value as List? ?? const [];
-        detections[entry.key] = [
-          for (final row in rows)
-            if (row is Map<String, dynamic>)
-              DetectionEvent(
-                detectionId: (row['detection_id'] as num?)?.toInt() ?? 0,
-                peakTimestampNs:
-                    (row['peak_timestamp_ns'] as num?)?.toInt() ?? 0,
-                outputTimestampNs:
-                    (row['output_timestamp_ns'] as num?)?.toInt() ?? 0,
-                thresholdMps2: (row['threshold_mps2'] as num?)?.toDouble() ?? 0,
-                sampleIndex: (row['sample_index'] as num?)?.toInt() ?? 0,
-                processingDurationMicros:
-                    (row['processing_duration_micros'] as num?)?.toInt() ?? 0,
-              ),
-        ];
-      }
-    }
-    return SavedRecording(
-      recordingId: id,
-      participantId: text('participant_id'),
-      activity: text('activity'),
-      phonePlacement: text('phone_placement'),
-      placementDetail: text('placement_detail'),
-      trialNumber: number('trial_number'),
-      durationSeconds: number('duration_seconds'),
-      samples: samples,
-      detections: detections,
-    );
+    return nextRecordingId(ids, date);
   }
 }
