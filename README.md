@@ -1,68 +1,82 @@
-# Eksperimen Deteksi Langkah dari Ponsel
+# Smartphone Step Detection Experiment
 
-Aplikasi Android berbasis Flutter/Dart untuk mengumpulkan data akselerometer
-ponsel dan membandingkan dua algoritma deteksi langkah dengan ambang adaptif.
+Smartphone Step Detection Experiment is a Flutter app that records accelerometer
+data and counts steps in real time. It compares two adaptive-threshold
+step-detection algorithms, **adaptive midpoint** and **mean + k·standard
+deviation**, for walking and jogging with the phone held in the hand or carried
+in a pocket.
 
-## Tujuan penelitian
+## Installation
 
-Eksperimen ini membandingkan:
+Use the [Flutter SDK](https://docs.flutter.dev/get-started/install) (Dart `^3.13.5`)
+to install the dependencies and run the app on a physical Android device.
 
-1. **Titik tengah adaptif:** `(nilai maksimum + nilai minimum) / 2`
-2. **Rata-rata plus standar deviasi:** `rata-rata + k × standar deviasi`
-
-Kedua algoritma harus memproses rekaman mentah yang sama, pipeline smoothing
-yang sama, aturan puncak yang sama, durasi jendela adaptif yang sama, serta
-interval minimum antarlangkah yang sama.
-
-Pilot awal menggunakan dua aktivitas (berjalan dan jogging) serta dua posisi
-ponsel (digenggam dan saku). Target awalnya lima pengulangan per kondisi dan
-jumlah pengulangan dapat ditambah. Pilot ini bersifat eksploratif dan tidak
-digunakan untuk menyatakan signifikansi statistik.
-
-## Kemampuan yang direncanakan
-
-- Merekam nilai akselerometer X/Y/Z dengan timestamp monotonik.
-- Menyimpan magnitudo mentah dan mengukur interval sampling aktual.
-- Memutar ulang setiap rekaman melalui kedua algoritma secara offline.
-- Mengimpor timestamp langkah dari anotasi ground truth manual.
-- Menghitung metrik event, jumlah langkah, latensi, dan pemrosesan.
-- Mengekspor data sensor, deteksi, ground truth, dan hasil evaluasi ke CSV.
-- Menjaga rekaman mentah tetap utuh serta menyimpan parameter setiap proses.
-
-## Batasan ruang lingkup
-
-Proyek ini bersifat lokal terlebih dahulu. Proyek tidak memerlukan akun,
-backend, upload cloud, pembayaran, GPS, atau analytics. Gravitasi tetap
-termasuk dalam eksperimen magnitudo mentah awal. Pemutaran audio, prediksi
-cadence, implementasi Kotlin/native, dan machine learning kompleks ditunda
-sampai pipeline sensor dan detektor tervalidasi pada ponsel Android fisik.
-
-## Status saat ini
-
-Repository ini berisi scaffold aplikasi Flutter. Milestone implementasi
-berikutnya adalah pipeline end-to-end minimal:
-
-1. Mengatur konfigurasi rekaman.
-2. Mengambil dan menyimpan sampel akselerometer.
-3. Memutar ulang kedua algoritma pada sampel yang identik.
-4. Menyimpan hasil dan mengekspor file CSV.
-
-Nilai placeholder dan sinyal sintetis tidak boleh dianggap sebagai hasil
-eksperimen nyata.
-
-## Pengembangan
-
-```powershell
+```bash
+git clone https://github.com/dandy63609/smartphone-step-detection-experiment.git
+cd smartphone-step-detection-experiment
 flutter pub get
-dart format .
-flutter analyze
-flutter test
 flutter run
 ```
 
-Validasi sensor harus dilakukan pada ponsel Android fisik. Pengujian emulator
-dan sinyal sintetis berguna untuk logika perangkat lunak, tetapi tidak dapat
-menggantikan rekaman berjalan dan jogging di dunia nyata.
+## Usage
 
-Lihat `AGENTS.md` untuk aturan teknis, integritas eksperimen, dan batasan
-implementasi lengkap.
+```dart
+import 'package:smartphone_step_detection_experiment/algorithms/step_detector.dart';
+import 'package:smartphone_step_detection_experiment/evaluation/event_matcher.dart';
+import 'package:smartphone_step_detection_experiment/models/experiment_models.dart';
+
+// Shared parameters for both algorithms
+const params = AlgorithmParameters(
+  smoothingSamples: 3,        // causal moving-average window
+  windowDurationMs: 1000,     // adaptive threshold window
+  minimumStepIntervalMs: 250, // refractory period
+  k: 1.5,                     // used by mean + k·SD only
+);
+
+// T(t) = (max(window) + min(window)) / 2
+final midpoint = StepDetector(
+  algorithm: ThresholdAlgorithm.adaptiveMidpoint,
+  parameters: params,
+);
+
+// T(t) = mean(window) + k · std(window)
+final meanStd = StepDetector(
+  algorithm: ThresholdAlgorithm.meanPlusStandardDeviation,
+  parameters: params,
+);
+
+// returns the detected steps for the recorded samples
+final List<DetectionEvent> steps = midpoint.process(samples);
+
+// returns precision, recall, F1, count error and latency
+final result = evaluateDetections(
+  recordingId: 'REC_20261027_001',
+  algorithm: 'adaptive_midpoint',
+  detections: steps,
+  groundTruth: groundTruthEvents,
+  matchingToleranceMs: 200,
+);
+print(result.percentageCountError); // e.g. 2.0 -> 98 of 100 steps
+```
+
+In the app, each trial covers **100 physical steps** across eight conditions
+(E1–E8: walking/jogging × hand/pocket × two algorithms). When a trial ends, both
+algorithms run again on the same recorded samples, and you can export
+`sensor_data.csv` and `evaluation_summary.csv`.
+
+Run the tests with:
+
+```bash
+flutter test
+```
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first
+to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
