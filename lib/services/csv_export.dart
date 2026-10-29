@@ -5,6 +5,11 @@ const sensorDataHeader =
     'recording_id,sample_index,timestamp_ns,activity,phone_placement,'
     'ax_mps2,ay_mps2,az_mps2,magnitude_mps2';
 
+const sensorDualStreamHeader =
+    'recording_id,sample_index,timestamp_ns,activity,phone_placement,'
+    'ax_mps2,ay_mps2,az_mps2,magnitude_mps2,'
+    'ux_mps2,uy_mps2,uz_mps2,user_magnitude_mps2';
+
 const evaluationSummaryHeader =
     'recording_id,trial_number,activity,phone_placement,algorithm,'
     'ground_truth_steps,predicted_steps,absolute_error_steps,'
@@ -42,8 +47,38 @@ String sensorDataCsv(Iterable<SavedRecording> recordings) {
   return buffer.toString();
 }
 
-/// `evaluation_summary.csv`: one row per recording × algorithm
-/// (AGENTS.md §11.2).
+/// `sensor_linear_data.csv`: dual-stream samples containing both Raw (+Gravity)
+/// and User/Linear (-Gravity) coordinates (PLANNING.md §3).
+String sensorDualStreamCsv(Iterable<SavedRecording> recordings) {
+  final buffer = StringBuffer('$sensorDualStreamHeader\n');
+  for (final recording in recordings) {
+    final activity = recording.config.activity.value;
+    final placement = recording.config.phonePlacement.value;
+    for (final sample in recording.samples) {
+      buffer.writeln(
+        [
+          recording.recordingId,
+          sample.sampleIndex,
+          sample.timestampNs,
+          activity,
+          placement,
+          sample.axMps2,
+          sample.ayMps2,
+          sample.azMps2,
+          sample.magnitudeMps2.toStringAsFixed(3),
+          sample.uxMps2.toStringAsFixed(4),
+          sample.uyMps2.toStringAsFixed(4),
+          sample.uzMps2.toStringAsFixed(4),
+          sample.userMagnitudeMps2.toStringAsFixed(3),
+        ].map(csvCell).join(','),
+      );
+    }
+  }
+  return buffer.toString();
+}
+
+/// `evaluation_summary.csv`: one row per recording × algorithm/variant
+/// (AGENTS.md §11.2 & PLANNING.md §3).
 String evaluationSummaryCsv(Iterable<StepCountResult> results) {
   final buffer = StringBuffer('$evaluationSummaryHeader\n');
   for (final r in results) {
@@ -53,7 +88,7 @@ String evaluationSummaryCsv(Iterable<StepCountResult> results) {
         r.trialNumber,
         r.activity.value,
         r.phonePlacement.value,
-        r.algorithm.value,
+        r.algorithmValue,
         r.groundTruthSteps,
         r.predictedSteps,
         r.absoluteErrorSteps,

@@ -9,6 +9,18 @@ enum PhonePlacement { hand, pocket }
 /// Factor A: the adaptive-threshold algorithm.
 enum ThresholdAlgorithm { adaptiveMidpoint, meanStd }
 
+/// The 4 simultaneous algorithm + sensor stream combinations defined in PLANNING.md:
+/// - A1: Adaptive Midpoint + Raw Accelerometer (with gravity)
+/// - A2: Adaptive Midpoint + User Accelerometer (linear / without gravity)
+/// - B1: Mean + k·SD + Raw Accelerometer (with gravity)
+/// - B2: Mean + k·SD + User Accelerometer (linear / without gravity)
+enum AlgorithmVariant {
+  a1MidpointRaw,
+  a2MidpointLinear,
+  b1MeanSdRaw,
+  b2MeanSdLinear,
+}
+
 extension ActivityLabel on Activity {
   /// Exported label (`walking` / `jogging`).
   String get value => name;
@@ -42,6 +54,54 @@ extension ThresholdAlgorithmLabel on ThresholdAlgorithm {
       ThresholdAlgorithm.values.firstWhere((a) => a.value == value);
 }
 
+extension AlgorithmVariantLabel on AlgorithmVariant {
+  /// Matrix code (`A1`, `A2`, `B1`, `B2`).
+  String get code => switch (this) {
+    AlgorithmVariant.a1MidpointRaw => 'A1',
+    AlgorithmVariant.a2MidpointLinear => 'A2',
+    AlgorithmVariant.b1MeanSdRaw => 'B1',
+    AlgorithmVariant.b2MeanSdLinear => 'B2',
+  };
+
+  /// Exported CSV / JSON identifier.
+  String get value => switch (this) {
+    AlgorithmVariant.a1MidpointRaw => 'adaptive_midpoint',
+    AlgorithmVariant.a2MidpointLinear => 'adaptive_midpoint_linear',
+    AlgorithmVariant.b1MeanSdRaw => 'mean_std',
+    AlgorithmVariant.b2MeanSdLinear => 'mean_sd_linear',
+  };
+
+  /// Human-readable name shown on the Scoreboard.
+  String get displayName => switch (this) {
+    AlgorithmVariant.a1MidpointRaw => 'Adaptive Midpoint (Raw +G)',
+    AlgorithmVariant.a2MidpointLinear => 'Adaptive Midpoint (Linear -G)',
+    AlgorithmVariant.b1MeanSdRaw => 'Mean + k·SD (Raw +G)',
+    AlgorithmVariant.b2MeanSdLinear => 'Mean + k·SD (Linear -G)',
+  };
+
+  /// Sensor stream label.
+  String get sensorLabel =>
+      usesLinearAcceleration ? 'User Accel (No Gravity)' : 'Raw Accel (+Gravity)';
+
+  ThresholdAlgorithm get thresholdAlgorithm => switch (this) {
+    AlgorithmVariant.a1MidpointRaw ||
+    AlgorithmVariant.a2MidpointLinear => ThresholdAlgorithm.adaptiveMidpoint,
+    AlgorithmVariant.b1MeanSdRaw ||
+    AlgorithmVariant.b2MeanSdLinear => ThresholdAlgorithm.meanStd,
+  };
+
+  bool get usesLinearAcceleration => switch (this) {
+    AlgorithmVariant.a1MidpointRaw || AlgorithmVariant.b1MeanSdRaw => false,
+    AlgorithmVariant.a2MidpointLinear || AlgorithmVariant.b2MeanSdLinear => true,
+  };
+
+  static AlgorithmVariant parse(String value) =>
+      AlgorithmVariant.values.firstWhere(
+        (v) => v.value == value || v.code == value,
+        orElse: () => AlgorithmVariant.a1MidpointRaw,
+      );
+}
+
 /// Returns the experiment condition ID (E1–E8) from the AGENTS.md table.
 String conditionId(
   Activity activity,
@@ -56,15 +116,14 @@ String conditionId(
   return 'E${base + activityOffset + algorithmOffset}';
 }
 
-/// Signal-processing parameters shared by both algorithms in the primary
-/// comparison. The initial `k = 1.5` is a documented starting point, not a
-/// claimed optimum; it can be changed for parameter sweeps.
+/// Signal-processing parameters shared by all algorithms in the comparison.
 class AlgorithmParameters {
   const AlgorithmParameters({
     this.smoothingSamples = 3,
     this.windowDurationMs = 1000,
     this.minimumStepIntervalMs = 250,
     this.k = 1.5,
+    this.minWindowSpreadMps2 = 1.2,
   });
 
   final int smoothingSamples;
@@ -72,11 +131,18 @@ class AlgorithmParameters {
   final int minimumStepIntervalMs;
   final double k;
 
+  /// Minimum dynamic range (`max(window) - min(window)`) in m/s² required in
+  /// the rolling window to accept a candidate step. Prevents thermal/MEMS
+  /// micro-noise from triggering false steps when the phone rests stationary
+  /// on a table (~0.01–0.15 m/s² spread).
+  final double minWindowSpreadMps2;
+
   Map<String, Object> toMap() => {
     'smoothing_samples': smoothingSamples,
     'window_duration_ms': windowDurationMs,
     'minimum_step_interval_ms': minimumStepIntervalMs,
     'k': k,
+    'min_window_spread_mps2': minWindowSpreadMps2,
   };
 
   factory AlgorithmParameters.fromMap(Map<String, dynamic>? map) {
@@ -87,6 +153,8 @@ class AlgorithmParameters {
       minimumStepIntervalMs:
           (map['minimum_step_interval_ms'] as num?)?.toInt() ?? 250,
       k: (map['k'] as num?)?.toDouble() ?? 1.5,
+      minWindowSpreadMps2:
+          (map['min_window_spread_mps2'] as num?)?.toDouble() ?? 1.2,
     );
   }
 }
@@ -141,6 +209,8 @@ class ExperimentConfig {
     if (parameters.minimumStepIntervalMs < 1)
       'Minimum step interval must be positive.',
     if (parameters.k < 0) 'k must not be negative.',
+    if (parameters.minWindowSpreadMps2 < 0)
+      'Stationary noise floor must not be negative.',
   ];
 
   Map<String, Object> toMap() => {
@@ -182,7 +252,8 @@ class ExperimentConfig {
       );
 }
 
-/// One raw accelerometer reading. Gravity is included (no subtraction).
+/// Synchronized accelerometer reading containing both Stream A (Raw with gravity)
+/// and Stream B (User/Linear without gravity).
 class SensorSample {
   const SensorSample({
     required this.recordingId,
@@ -191,18 +262,36 @@ class SensorSample {
     required this.axMps2,
     required this.ayMps2,
     required this.azMps2,
+    this.uxMps2 = 0.0,
+    this.uyMps2 = 0.0,
+    this.uzMps2 = 0.0,
   });
 
   final String recordingId;
   final int sampleIndex;
   final int timestampNs;
+
+  /// Raw accelerometer axes (includes Earth gravity ~9.81 m/s²).
   final double axMps2;
   final double ayMps2;
   final double azMps2;
 
-  /// m(t) = sqrt(ax² + ay² + az²)
+  /// Linear/User accelerometer axes (gravity removed, ~0.0 m/s² at rest).
+  final double uxMps2;
+  final double uyMps2;
+  final double uzMps2;
+
+  /// Stream A norm: m_raw(t) = sqrt(ax² + ay² + az²)
   double get magnitudeMps2 =>
       math.sqrt(axMps2 * axMps2 + ayMps2 * ayMps2 + azMps2 * azMps2);
+
+  /// Stream B norm: m_user(t) = sqrt(ux² + uy² + uz²)
+  double get userMagnitudeMps2 =>
+      math.sqrt(uxMps2 * uxMps2 + uyMps2 * uyMps2 + uzMps2 * uzMps2);
+
+  /// True when non-zero linear accelerometer readings are present on this sample.
+  bool get hasLinearReading =>
+      uxMps2 != 0.0 || uyMps2 != 0.0 || uzMps2 != 0.0;
 
   Map<String, Object> toMap() => {
     'sample_index': sampleIndex,
@@ -211,6 +300,10 @@ class SensorSample {
     'ay_mps2': ayMps2,
     'az_mps2': azMps2,
     'magnitude_mps2': magnitudeMps2,
+    'ux_mps2': uxMps2,
+    'uy_mps2': uyMps2,
+    'uz_mps2': uzMps2,
+    'user_magnitude_mps2': userMagnitudeMps2,
   };
 
   factory SensorSample.fromMap(String recordingId, Map<String, dynamic> map) =>
@@ -221,6 +314,9 @@ class SensorSample {
         axMps2: (map['ax_mps2'] as num?)?.toDouble() ?? 0,
         ayMps2: (map['ay_mps2'] as num?)?.toDouble() ?? 0,
         azMps2: (map['az_mps2'] as num?)?.toDouble() ?? 0,
+        uxMps2: (map['ux_mps2'] as num?)?.toDouble() ?? 0,
+        uyMps2: (map['uy_mps2'] as num?)?.toDouble() ?? 0,
+        uzMps2: (map['uz_mps2'] as num?)?.toDouble() ?? 0,
       );
 }
 
@@ -270,6 +366,7 @@ class SavedRecording {
     required this.samples,
     required this.liveStepCount,
     required this.replayDetections,
+    this.replayVariantDetections = const {},
   });
 
   final String recordingId;
@@ -280,11 +377,23 @@ class SavedRecording {
   /// Steps counted live by [ExperimentConfig.primaryLiveAlgorithm].
   final int liveStepCount;
 
-  /// Offline replay results for both algorithms on the same samples.
+  /// Offline replay results for the primary 2 algorithms (Raw stream: A1 & B1).
   final Map<ThresholdAlgorithm, List<DetectionEvent>> replayDetections;
+
+  /// Offline replay results across all 4 combinations (A1, A2, B1, B2).
+  final Map<AlgorithmVariant, List<DetectionEvent>> replayVariantDetections;
 
   int replayCount(ThresholdAlgorithm algorithm) =>
       replayDetections[algorithm]?.length ?? 0;
+
+  int replayVariantCount(AlgorithmVariant variant) {
+    final direct = replayVariantDetections[variant];
+    if (direct != null) return direct.length;
+    if (!variant.usesLinearAcceleration) {
+      return replayCount(variant.thresholdAlgorithm);
+    }
+    return 0;
+  }
 
   /// True when the live count equals the replay count of the same algorithm.
   bool get liveMatchesReplay =>

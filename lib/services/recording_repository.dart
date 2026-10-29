@@ -33,6 +33,10 @@ String recordingToJson(SavedRecording recording) => jsonEncode({
     for (final entry in recording.replayDetections.entries)
       entry.key.value: [for (final e in entry.value) e.toMap()],
   },
+  'replay_variant_detections': {
+    for (final entry in recording.replayVariantDetections.entries)
+      entry.key.value: [for (final e in entry.value) e.toMap()],
+  },
   'samples': [for (final s in recording.samples) s.toMap()],
 });
 
@@ -57,6 +61,16 @@ SavedRecording recordingFromJson(String source) {
       ];
     }
   }
+  final variantReplay = <AlgorithmVariant, List<DetectionEvent>>{};
+  final rawVariantReplay = root['replay_variant_detections'];
+  if (rawVariantReplay is Map<String, dynamic>) {
+    for (final entry in rawVariantReplay.entries) {
+      variantReplay[AlgorithmVariantLabel.parse(entry.key)] = [
+        for (final row in entry.value as List)
+          DetectionEvent.fromMap(row as Map<String, dynamic>),
+      ];
+    }
+  }
   return SavedRecording(
     recordingId: id,
     createdAt:
@@ -65,6 +79,7 @@ SavedRecording recordingFromJson(String source) {
     config: ExperimentConfig.fromMap(config),
     liveStepCount: (root['live_step_count'] as num?)?.toInt() ?? 0,
     replayDetections: replay,
+    replayVariantDetections: variantReplay,
     samples: [
       for (final row in (root['samples'] as List? ?? const []))
         SensorSample.fromMap(id, row as Map<String, dynamic>),
