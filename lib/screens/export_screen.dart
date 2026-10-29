@@ -45,14 +45,16 @@ class _ExportScreenState extends State<ExportScreen> {
     if (_recordings.isEmpty) return;
     setState(() {
       _exporting = true;
-      _statusMessage = 'Generating sensor_data.csv and evaluation_summary.csv...';
+      _statusMessage =
+          'Generating sensor_data.csv, sensor_linear_data.csv, and evaluation_summary.csv...';
     });
 
     try {
       final files = await _exportService.writeCsvFiles(_recordings);
       if (!mounted) return;
       setState(() {
-        _statusMessage = 'Generated ${files.length} CSV files: ${files.map((f) => f.path.split(RegExp(r'[/\\]')).last).join(', ')}';
+        _statusMessage =
+            'Export ready: ${files.map((f) => f.path.split(RegExp(r'[/\\]')).last).join(', ')}';
       });
       await _exportService.share(files);
     } catch (e) {
@@ -67,7 +69,6 @@ class _ExportScreenState extends State<ExportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final totalSamples = _recordings.fold<int>(
       0,
       (sum, r) => sum + r.samples.length,
@@ -79,7 +80,7 @@ class _ExportScreenState extends State<ExportScreen> {
         actions: [
           IconButton(
             onPressed: _load,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Reload',
           ),
         ],
@@ -88,51 +89,112 @@ class _ExportScreenState extends State<ExportScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Summary card
-                    Card(
-                      elevation: 0,
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Experiment Dataset Summary',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                    // Dataset Overview Card
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE1E6EF)),
+                      ),
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.folder_zip_outlined,
+                                size: 20,
+                                color: Color(0xFF1A73E8),
                               ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Experiment Dataset Summary',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1F1F1F),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _statTile(
+                                  'Total Trials',
+                                  '${_recordings.length}',
+                                  Icons.assignment_turned_in_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _statTile(
+                                  'Raw Samples',
+                                  '$totalSamples',
+                                  Icons.timeline_rounded,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _statTile(
+                                  'CSV Schemas',
+                                  '3 files',
+                                  Icons.table_view_rounded,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF3F6FC),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            child: const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _statColumn('Total Trials', '${_recordings.length}'),
-                                _statColumn('Sensor Samples', '$totalSamples'),
-                                _statColumn(
-                                  'Output CSVs',
-                                  '2 files',
+                                Text(
+                                  '• sensor_data.csv — Standard 9-column raw accelerometer timeseries',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1F1F1F),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '• sensor_linear_data.csv — Dual-stream (Raw +G & Linear -G)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1F1F1F),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  '• evaluation_summary.csv — 4-way benchmark (A1, A2, B1, B2)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1F1F1F),
+                                  ),
                                 ),
                               ],
                             ),
-                            const Divider(height: 24),
-                            const Text(
-                              'Target Files:\n'
-                              '1. sensor_data.csv (High-Frequency Timeseries)\n'
-                              '2. evaluation_summary.csv (100-Step Margin of Error)',
-                              style: TextStyle(fontSize: 12, height: 1.4),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // Export button
+                    // Export Button
                     SizedBox(
                       height: 52,
                       child: FilledButton.icon(
@@ -141,43 +203,45 @@ class _ExportScreenState extends State<ExportScreen> {
                             : _exportAndShare,
                         icon: _exporting
                             ? const SizedBox(
-                                width: 20,
-                                height: 20,
+                                width: 18,
+                                height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: Colors.white,
                                 ),
                               )
-                            : const Icon(Icons.share),
+                            : const Icon(Icons.ios_share_rounded, size: 20),
                         label: Text(
                           _exporting
-                              ? 'Exporting...'
+                              ? 'Generating CSV Package...'
                               : 'Export & Share CSV Package',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
                         ),
                       ),
                     ),
 
                     if (_statusMessage != null) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Text(
                         _statusMessage!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A73E8),
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ],
 
-                    const SizedBox(height: 20),
-                    Text(
-                      'Recorded Trials (${_recordings.length})',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        'Recorded Trials (${_recordings.length})',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1F1F1F),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -185,45 +249,123 @@ class _ExportScreenState extends State<ExportScreen> {
                     // List of recordings
                     Expanded(
                       child: _recordings.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No trials recorded yet.\nConduct trials from the Dashboard.',
-                                textAlign: TextAlign.center,
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.inbox_outlined,
+                                    size: 40,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'No trials recorded yet.\nStart a 100-step trial from the Dashboard.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF5F6368),
+                                    ),
+                                  ),
+                                ],
                               ),
                             )
-                          : ListView.separated(
+                          : ListView.builder(
                               itemCount: _recordings.length,
-                              separatorBuilder: (_, _) =>
-                                  const Divider(height: 1),
                               itemBuilder: (context, index) {
                                 final r = _recordings[index];
-                                final mid = r.replayCount(
-                                  ThresholdAlgorithm.adaptiveMidpoint,
+                                final a1 = r.replayVariantCount(
+                                  AlgorithmVariant.a1MidpointRaw,
                                 );
-                                final msd = r.replayCount(
-                                  ThresholdAlgorithm.meanStd,
+                                final a2 = r.replayVariantCount(
+                                  AlgorithmVariant.a2MidpointLinear,
                                 );
-                                return ListTile(
-                                  title: Text(
-                                    r.recordingId,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                final b1 = r.replayVariantCount(
+                                  AlgorithmVariant.b1MeanSdRaw,
+                                );
+                                final b2 = r.replayVariantCount(
+                                  AlgorithmVariant.b2MeanSdLinear,
+                                );
+                                final cond = conditionId(
+                                  r.config.activity,
+                                  r.config.phonePlacement,
+                                  r.config.primaryLiveAlgorithm,
+                                );
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(0xFFE1E6EF),
                                     ),
                                   ),
-                                  subtitle: Text(
-                                    '${r.config.participantId} • ${r.config.activity.value} • ${r.config.phonePlacement.value} (#${r.config.trialNumber})\n'
-                                    'Detections: Midpoint=$mid | Mean+SD=$msd (out of ${r.config.targetSteps})',
-                                    style: const TextStyle(fontSize: 12),
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE8F0FE),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          cond,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13,
+                                            color: Color(0xFF1A73E8),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              r.recordingId,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
+                                                color: Color(0xFF1F1F1F),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${r.config.participantId} • ${r.config.activity.value.toUpperCase()} • ${r.config.phonePlacement.value.toUpperCase()} (#${r.config.trialNumber})',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Color(0xFF5F6368),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'A1:$a1 • A2:$a2 • B1:$b1 • B2:$b2  (Target: ${r.config.targetSteps})',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF1A73E8),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        '${r.samples.length}\nsmp',
+                                        textAlign: TextAlign.right,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF80868B),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  trailing: Text(
-                                    '${r.samples.length} smp',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  isThreeLine: true,
                                 );
                               },
                             ),
@@ -235,15 +377,35 @@ class _ExportScreenState extends State<ExportScreen> {
     );
   }
 
-  Widget _statColumn(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-      ],
+  Widget _statTile(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFD),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE8EEF7)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF1A73E8)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1F1F1F),
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF5F6368),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

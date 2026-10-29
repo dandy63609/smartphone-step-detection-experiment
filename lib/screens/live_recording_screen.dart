@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -39,6 +40,7 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
 
   bool _isRecording = false;
   int _liveSteps = 0;
+  int _sampleCount = 0;
   final _stopwatch = Stopwatch();
   Timer? _tickerTimer;
   Timer? _fallbackTimer;
@@ -63,10 +65,10 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
 
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 180),
     );
-    _pulseScale = Tween<double>(begin: 1.0, end: 1.25).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
+    _pulseScale = Tween<double>(begin: 1.0, end: 1.12).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeOutCubic),
     );
 
     _startCountdown();
@@ -123,6 +125,7 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
         if (!mounted) return;
 
         setState(() {
+          _sampleCount = sample.sampleIndex + 1;
           _recentOutputs.addLast(output);
           if (_recentOutputs.length > _maxChartPoints) {
             _recentOutputs.removeFirst();
@@ -154,8 +157,12 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
 
     final samples = await _recordingService.stop();
 
-    // Replay both algorithms on exact recorded samples
+    // Replay both primary algorithms and all 4 variants (A1, A2, B1, B2)
     final replayResults = StepDetector.replayBoth(
+      samples,
+      widget.config.parameters,
+    );
+    final replayVariantResults = StepDetector.replayAllFour(
       samples,
       widget.config.parameters,
     );
@@ -167,6 +174,7 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
       samples: samples,
       liveStepCount: _liveSteps,
       replayDetections: replayResults,
+      replayVariantDetections: replayVariantResults,
     );
 
     await _store.save(recording);
@@ -189,155 +197,287 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final target = widget.config.targetSteps;
     final progress = target > 0 ? (_liveSteps / target).clamp(0.0, 1.0) : 0.0;
+    final latestOutput = _recentOutputs.isEmpty ? null : _recentOutputs.last;
+    final isStationary = latestOutput?.isStationary ?? true;
+    final currentCond = conditionId(
+      widget.config.activity,
+      widget.config.phonePlacement,
+      widget.config.primaryLiveAlgorithm,
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.recordingId),
         automaticallyImplyLeading: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F0FE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  currentCond,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: Color(0xFF1A73E8),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: _countdown > 0
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Get Ready...',
-                      style: theme.textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      '$_countdown',
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontSize: 96,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Activity: ${widget.config.activity.value.toUpperCase()} | '
-                      'Placement: ${widget.config.phonePlacement.value.toUpperCase()}',
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ],
-                ),
-              )
+            ? _buildCountdownView()
             : Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Metadata header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Chip(
-                          avatar: const Icon(Icons.directions_walk, size: 18),
-                          label: Text(widget.config.activity.value),
-                        ),
-                        Chip(
-                          avatar: const Icon(Icons.phone_android, size: 18),
-                          label: Text(widget.config.phonePlacement.value),
-                        ),
-                        Chip(
-                          avatar: const Icon(Icons.speed, size: 18),
-                          label: Text(
-                            widget.config.primaryLiveAlgorithm.displayName,
+                    // Metadata Pill Bar
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _infoPill(
+                            icon: widget.config.activity == Activity.walking
+                                ? Icons.directions_walk_rounded
+                                : Icons.directions_run_rounded,
+                            label: widget.config.activity.value.toUpperCase(),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          _infoPill(
+                            icon:
+                                widget.config.phonePlacement ==
+                                    PhonePlacement.hand
+                                ? Icons.back_hand_outlined
+                                : Icons.checkroom_rounded,
+                            label:
+                                widget.config.phonePlacement.value.toUpperCase(),
+                          ),
+                          const SizedBox(width: 8),
+                          _infoPill(
+                            icon: Icons.auto_graph_rounded,
+                            label:
+                                widget.config.primaryLiveAlgorithm.displayName,
+                          ),
+                        ],
+                      ),
                     ),
                     const Spacer(),
 
-                    // Prominent Live Counter with Pulse
+                    // Google Fit Circular Gauge with Step Counter
                     Center(
                       child: ScaleTransition(
                         scale: _pulseScale,
-                        child: Text(
-                          '$_liveSteps',
-                          style: theme.textTheme.displayLarge?.copyWith(
-                            fontSize: 100,
-                            fontWeight: FontWeight.w900,
-                            color: theme.colorScheme.primary,
+                        child: SizedBox(
+                          width: 210,
+                          height: 210,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: 210,
+                                height: 210,
+                                child: CircularProgressIndicator(
+                                  value: progress,
+                                  strokeWidth: 12,
+                                  strokeCap: StrokeCap.round,
+                                  backgroundColor: const Color(0xFFE8F0FE),
+                                  color: _liveSteps >= target
+                                      ? const Color(0xFF1E8E3E)
+                                      : const Color(0xFF1A73E8),
+                                ),
+                              ),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '$_liveSteps',
+                                    style: TextStyle(
+                                      fontSize: 68,
+                                      height: 1.0,
+                                      fontWeight: FontWeight.w800,
+                                      color: _liveSteps >= target
+                                          ? const Color(0xFF137333)
+                                          : const Color(0xFF1A73E8),
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Target: $target Steps',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF5F6368),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF3F6FC),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _formatElapsed(),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontFamily: 'monospace',
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF1F1F1F),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        'Target: $target Steps',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Progress bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 12,
-                        backgroundColor: Colors.grey.shade300,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Elapsed Timer
-                    Center(
-                      child: Text(
-                        _formatElapsed(),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     const Spacer(),
 
-                    // Live Signal Chart
+                    // Live Signal Waveform Card (Locked Minimum Scale when Stationary)
                     Container(
-                      height: 130,
+                      height: 165,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE1E6EF)),
                       ),
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Live Acceleration & Threshold',
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Live Acceleration',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1F1F1F),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isStationary
+                                          ? const Color(0xFFF1F3F4)
+                                          : const Color(0xFFE6F4EA),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: isStationary
+                                                ? const Color(0xFF80868B)
+                                                : const Color(0xFF1E8E3E),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          isStationary
+                                              ? 'Stationary (Idle)'
+                                              : 'Motion Active',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: isStationary
+                                                ? const Color(0xFF5F6368)
+                                                : const Color(0xFF137333),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                               Row(
                                 children: [
-                                  _legend(Colors.blue, 'Magnitude'),
+                                  _legend(
+                                    const Color(0xFF1A73E8),
+                                    'Mag',
+                                  ),
                                   const SizedBox(width: 8),
-                                  _legend(Colors.orange, 'Threshold'),
+                                  _legend(
+                                    const Color(0xFFF29900),
+                                    'Thresh',
+                                  ),
                                   const SizedBox(width: 8),
-                                  _legend(Colors.green, 'Step'),
+                                  _legend(
+                                    const Color(0xFF1E8E3E),
+                                    'Step',
+                                  ),
                                 ],
                               ),
                             ],
                           ),
-                          Expanded(
-                            child: CustomPaint(
-                              painter: _SignalChartPainter(
-                                outputs: _recentOutputs.toList(),
+                          const SizedBox(height: 4),
+                          // Live telemetry numerical readout
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                latestOutput != null
+                                    ? 'm(t): ${latestOutput.smoothedMps2.toStringAsFixed(2)} m/s²  •  T(t): ${latestOutput.thresholdMps2.toStringAsFixed(2)} m/s²'
+                                    : 'Waiting for sensor stream...',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF5F6368),
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
                               ),
-                              child: const SizedBox.expand(),
+                              Text(
+                                '$_sampleCount smp',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF80868B),
+                                  fontFeatures: [FontFeature.tabularFigures()],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: CustomPaint(
+                                painter: _SignalChartPainter(
+                                  outputs: _recentOutputs.toList(),
+                                ),
+                                child: const SizedBox.expand(),
+                              ),
                             ),
                           ),
                         ],
@@ -345,21 +485,21 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
                     ),
                     const SizedBox(height: 16),
 
-                    // Stop Button
+                    // Stop Button (Google M3 Pill Button)
                     SizedBox(
-                      height: 56,
+                      height: 54,
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
+                          backgroundColor: const Color(0xFFD93025),
                           foregroundColor: Colors.white,
                         ),
                         onPressed: _stopRecording,
-                        icon: const Icon(Icons.stop, size: 28),
+                        icon: const Icon(Icons.stop_circle_outlined, size: 22),
                         label: const Text(
                           'Stop (100 Steps Completed)',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -367,6 +507,84 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildCountdownView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 140,
+              height: 140,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F0FE),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF1A73E8).withValues(alpha: 0.25),
+                  width: 6,
+                ),
+              ),
+              child: Text(
+                '$_countdown',
+                style: const TextStyle(
+                  fontSize: 72,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A73E8),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Get Ready...',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F1F1F),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Assume starting posture (${widget.config.activity.value.toUpperCase()} • ${widget.config.phonePlacement.value.toUpperCase()})',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF5F6368),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoPill({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE1E6EF)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF1A73E8)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F1F1F),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -381,7 +599,14 @@ class _LiveRecordingScreenState extends State<LiveRecordingScreen>
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF5F6368),
+          ),
+        ),
       ],
     );
   }
@@ -392,73 +617,149 @@ class _SignalChartPainter extends CustomPainter {
 
   final List<DetectorOutput> outputs;
 
+  /// Minimum vertical range (m/s²) so stationary MEMS micro-noise (~0.02 m/s²)
+  /// renders as a steady flat line instead of auto-zooming to fill the chart.
+  static const double _minVerticalSpanMps2 = 6.0;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final bgPaint = Paint()..color = const Color(0xFFF8FAFD);
+    canvas.drawRect(Offset.zero & size, bgPaint);
+
+    // Subtle horizontal reference grid lines
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE8EEF7)
+      ..strokeWidth = 1.0;
+    for (final frac in [0.2, 0.5, 0.8]) {
+      final y = size.height * frac;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
     if (outputs.isEmpty) return;
 
     final magPaint = Paint()
-      ..color = Colors.blue.shade700
-      ..strokeWidth = 1.8
+      ..color = const Color(0xFF1A73E8)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
 
     final threshPaint = Paint()
-      ..color = Colors.orange.shade800
-      ..strokeWidth = 1.8
+      ..color = const Color(0xFFF29900)
+      ..strokeWidth = 1.6
       ..style = PaintingStyle.stroke;
 
-    final stepDotPaint = Paint()
-      ..color = Colors.green.shade700
+    final stepHaloPaint = Paint()
+      ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    // Find y range
+    final stepDotPaint = Paint()
+      ..color = const Color(0xFF1E8E3E)
+      ..style = PaintingStyle.fill;
+
+    // Compute raw min/max
     var minY = double.infinity;
     var maxY = double.negativeInfinity;
+    var sumMag = 0.0;
     for (final o in outputs) {
+      sumMag += o.smoothedMps2;
       if (o.smoothedMps2 < minY) minY = o.smoothedMps2;
       if (o.smoothedMps2 > maxY) maxY = o.smoothedMps2;
       if (o.thresholdMps2 < minY) minY = o.thresholdMps2;
       if (o.thresholdMps2 > maxY) maxY = o.thresholdMps2;
     }
+    final meanMag = sumMag / outputs.length;
 
-    if (minY == maxY) {
-      minY -= 1;
-      maxY += 1;
+    // Enforce minimum vertical span so stationary table noise stays flat
+    final rawSpan = maxY - minY;
+    if (rawSpan < _minVerticalSpanMps2) {
+      final center = (maxY + minY) / 2.0;
+      minY = center - _minVerticalSpanMps2 / 2.0;
+      maxY = center + _minVerticalSpanMps2 / 2.0;
+    } else {
+      final pad = rawSpan * 0.12;
+      minY -= pad;
+      maxY += pad;
     }
-    // Add margins
-    final range = maxY - minY;
-    minY -= range * 0.1;
-    maxY += range * 0.1;
 
     double toY(double v) {
       return size.height - ((v - minY) / (maxY - minY)) * size.height;
     }
 
     final dx = size.width / (_LiveRecordingScreenState._maxChartPoints - 1);
-    final xOffset = (_LiveRecordingScreenState._maxChartPoints - outputs.length) * dx;
+    final xOffset =
+        (_LiveRecordingScreenState._maxChartPoints - outputs.length) * dx;
 
     final magPath = Path();
+    final fillPath = Path();
     final threshPath = Path();
 
     for (var i = 0; i < outputs.length; i++) {
+      final out = outputs[i];
       final x = xOffset + i * dx;
-      final my = toY(outputs[i].smoothedMps2);
-      final ty = toY(outputs[i].thresholdMps2);
+      // When stationary, suppress sub-0.08 m/s² MEMS jitter around meanMag for visual stillness
+      final displayMag =
+          (out.isStationary && (out.smoothedMps2 - meanMag).abs() < 0.08)
+          ? meanMag
+          : out.smoothedMps2;
+      final my = toY(displayMag);
+      final ty = toY(out.thresholdMps2);
 
       if (i == 0) {
         magPath.moveTo(x, my);
+        fillPath.moveTo(x, size.height);
+        fillPath.lineTo(x, my);
         threshPath.moveTo(x, ty);
       } else {
         magPath.lineTo(x, my);
+        fillPath.lineTo(x, my);
         threshPath.lineTo(x, ty);
       }
 
-      if (outputs[i].step != null) {
-        canvas.drawCircle(Offset(x, my), 4.0, stepDotPaint);
+      if (i == outputs.length - 1) {
+        fillPath.lineTo(x, size.height);
+        fillPath.close();
       }
     }
 
+    // Soft gradient fill under magnitude curve
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFF1A73E8).withValues(alpha: 0.18),
+          const Color(0xFF1A73E8).withValues(alpha: 0.0),
+        ],
+      ).createShader(Offset.zero & size)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawPath(fillPath, fillPaint);
+    _drawDashedPath(canvas, threshPath, threshPaint);
     canvas.drawPath(magPath, magPaint);
-    canvas.drawPath(threshPath, threshPaint);
+
+    // Draw step confirmation markers on top
+    for (var i = 0; i < outputs.length; i++) {
+      if (outputs[i].step != null) {
+        final x = xOffset + i * dx;
+        final my = toY(outputs[i].smoothedMps2);
+        canvas.drawCircle(Offset(x, my), 5.5, stepHaloPaint);
+        canvas.drawCircle(Offset(x, my), 4.0, stepDotPaint);
+      }
+    }
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      const dashLength = 5.0;
+      const gapLength = 3.5;
+      while (distance < metric.length) {
+        final end = math.min(distance + dashLength, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance += dashLength + gapLength;
+      }
+    }
   }
 
   @override
