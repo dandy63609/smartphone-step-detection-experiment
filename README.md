@@ -1,14 +1,35 @@
 # Smartphone Step Detection Experiment
 
-A research-grade Flutter application comparing two adaptive-threshold step-detection algorithms (**Adaptive Midpoint** and **Mean + k·SD**) for smartphone accelerometers across walking and jogging activities and phone placements (hand vs. pocket).
+A research-grade Flutter application comparing adaptive-threshold step-detection algorithms (**Adaptive Midpoint** and **Mean + $k\cdot\text{SD}$**) across both **Raw Accelerometer (with gravity)** and **User/Linear Accelerometer (without gravity)** streams for walking and jogging activities under different phone placements (hand vs. pocket).
 
 Every trial is calibrated against a standardized **100 physical steps** ground truth ($N_{\text{true}} = 100$).
 
 ---
 
+## Key Features
+
+- **4-Algorithm Simultaneous Benchmark (A1, A2, B1, B2):**
+  One physical 100-step session records synchronized dual sensor streams at 100 Hz and evaluates all 4 algorithm combinations side-by-side:
+  | Code | Threshold Algorithm | Sensor Input Stream | Description |
+  | :---: | :--- | :--- | :--- |
+  | **A1** | **Adaptive Midpoint** $\frac{\max + \min}{2}$ | Raw Accelerometer (+Gravity) | Baseline adaptive midpoint with gravity ($\approx 9.8\ \text{m/s}^2$). |
+  | **A2** | **Adaptive Midpoint** $\frac{\max + \min}{2}$ | User Accelerometer (Linear -Gravity) | Tests whether gravity removal stabilizes the dynamic midpoint. |
+  | **B1** | **Mean + $k\cdot\text{SD}$** ($\mu + k\sigma$) | Raw Accelerometer (+Gravity) | Statistical deviation threshold on raw magnitude. |
+  | **B2** | **Mean + $k\cdot\text{SD}$** ($\mu + k\sigma$) | User Accelerometer (Linear -Gravity) | Statistical deviation threshold on pure linear acceleration. |
+- **Stationary Noise Gate (`minWindowSpreadMps2 = 1.2` $\text{m/s}^2$):**
+  Prevents thermal/MEMS micro-noise ($\approx \pm 0.03\ \text{m/s}^2$) from triggering false step counts when the smartphone rests stationary on a table, while locking the live chart's minimum vertical span (`6.0` $\text{m/s}^2$) so idle signals appear as a steady flat line.
+- **Google Material Design 3 UI (Google Fit / Health Connect Style):**
+  Clean tonal surfaces, `SegmentedButton` factor controls, circular step progress gauge with pulse animation, real-time $m(t)$ & $T(t)$ telemetry, and an instant 4-way **Scoreboard** classifying each detector (`Akurat`, `Overcounting`, `Undercounting`).
+- **Complete CSV Dataset Export:**
+  One-tap native sharing of `sensor_data.csv`, `sensor_linear_data.csv`, and `evaluation_summary.csv`.
+- **Automated CI/CD & Slim APK Releases:**
+  GitHub Actions workflows for Gitleaks secret scanning, `flutter analyze`, `flutter test`, and automatic `--split-per-abi` slim APK (~15 MB) publishing to GitHub Releases.
+
+---
+
 ## Installation
 
-Ensure you have the [Flutter SDK](https://docs.flutter.dev/get-started/install) installed (Dart `^3.13.5`).
+Ensure you have the [Flutter SDK](https://docs.flutter.dev/get-started/install) installed (Dart `^3.11.0+`).
 
 Clone the repository and install dependencies:
 
@@ -24,37 +45,40 @@ Run on a physical Android device:
 flutter run
 ```
 
+Or download the latest pre-built **`step-detection-v*-arm64-v8a.apk`** directly from the repository's **GitHub Releases** page.
+
 ---
 
-## Usage
+## In-App Experimental Workflow
 
-### 1. In-App Experimental Workflow
-
-1. **Dashboard:** Displays progress across the 8 experimental conditions (**E1–E8**), targeting 5 repetitions per condition (40 physical recordings total).
-2. **Setup:** Select participant ID, activity (`walking` / `jogging`), placement (`hand` / `pocket`), and the primary live algorithm.
+1. **Dashboard:** Displays pilot progress across the 8 factorial conditions (**E1–E8**), targeting 5 repetitions per condition (40 physical recordings total).
+2. **Setup:** Select participant ID (`P01`), activity (`walking` / `jogging`), placement (`hand` / `pocket`), and the primary live algorithm using Material 3 segmented controls.
 3. **Live Recording:**
    - 3-second preparation countdown.
-   - Real-time step counter, visual pulse animation, and progress toward 100 steps.
-   - Live waveform chart rendering acceleration magnitude, dynamic threshold, and detected step peaks.
+   - Google Fit-style circular step counter gauge, visual pulse animation, and progress toward 100 steps.
+   - Live waveform chart rendering acceleration magnitude $m(t)$, dynamic threshold $T(t)$, motion status (`Stationary (Idle)` vs `Motion Active`), and confirmed step peaks.
    - Manual **"Stop (100 Steps Completed)"** trigger.
-4. **Trial Results & Replay:** Side-by-side comparison of **Adaptive Midpoint** vs. **Mean + k·SD** with absolute error, margin of error (%), and accuracy (%). Live results are automatically verified against offline replay.
-5. **Export:** One-tap native sharing of `sensor_data.csv` and `evaluation_summary.csv`.
+4. **Trial Evaluation & 4-Algorithm Scoreboard:**
+   - Automatic verification that live step counts match offline replay.
+   - **4-Algorithm Scoreboard (A1, A2, B1, B2)** comparing detected steps, signed step difference, Margin of Error (%), and status (`Akurat`, `Overcounting`, `Undercounting`).
+5. **Export Datasets:** One-tap native sharing of `sensor_data.csv`, `sensor_linear_data.csv`, and `evaluation_summary.csv`.
 
 ---
 
-### 2. Dart API & Algorithmic Signal Processing
+## Dart API & Algorithmic Signal Processing
 
 ```dart
 import 'package:smartphone_step_detection_experiment/algorithms/step_detector.dart';
 import 'package:smartphone_step_detection_experiment/evaluation/step_count_evaluation.dart';
 import 'package:smartphone_step_detection_experiment/models/experiment_models.dart';
 
-// Shared algorithm parameters (AGENTS.md §3)
+// Shared algorithm parameters
 const params = AlgorithmParameters(
-  smoothingSamples: 3,        // causal moving-average window
-  windowDurationMs: 1000,     // rolling threshold window duration
-  minimumStepIntervalMs: 250, // refractory lockout
-  k: 1.5,                     // used by Mean + k·SD algorithm
+  smoothingSamples: 3,         // causal moving-average window
+  windowDurationMs: 1000,      // rolling threshold window duration
+  minimumStepIntervalMs: 250,  // refractory lockout
+  k: 1.5,                      // used by Mean + k·SD algorithm
+  minWindowSpreadMps2: 1.2,    // stationary MEMS noise gate
 );
 
 // Instantiate streaming detector for live acceleration events
@@ -71,48 +95,26 @@ for (final sample in sensorStream) {
   }
 }
 
-// Replay offline over exact recorded sample sequence
-final replayDetections = StepDetector.replay(
-  recordedSamples,
-  algorithm: ThresholdAlgorithm.meanStd,
-  parameters: params,
-);
-
-// Compute 100-step ground-truth error metrics
-final evaluation = StepCountResult(
-  recordingId: 'REC_20261027_001',
-  trialNumber: 1,
-  activity: Activity.walking,
-  phonePlacement: PhonePlacement.hand,
-  algorithm: ThresholdAlgorithm.meanStd,
-  groundTruthSteps: 100,
-  predictedSteps: replayDetections.length,
-);
-
-print('Margin of Error: ${evaluation.marginOfErrorPercent.toStringAsFixed(2)}%');
-print('Accuracy: ${evaluation.accuracyPercent.toStringAsFixed(2)}%');
+// Replay all 4 combinations (A1, A2, B1, B2) offline over recorded samples
+final allFourDetections = StepDetector.replayAllFour(recordedSamples, params);
+for (final entry in allFourDetections.entries) {
+  print('${entry.key.code} (${entry.key.displayName}): ${entry.value.length} steps');
+}
 ```
 
 ---
 
 ## Running Tests
 
-Run the test suite including vector magnitude checks, rolling window statistics, peak detection state machine, exact CSV schema tests, and the synthetic 100-peak signal fixture:
+Run the test suite including vector magnitude checks (raw & linear), rolling window statistics, peak detection state machine, 30-second stationary table noise test, exact CSV schema tests, and the synthetic 100-peak signal fixture across all 4 variants:
 
 ```bash
+flutter analyze
 flutter test
 ```
 
 ---
 
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
-
----
-
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+This project is licensed under the [MIT License](LICENSE).

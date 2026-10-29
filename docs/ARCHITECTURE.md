@@ -35,9 +35,10 @@ The signal processing pipeline executes identically during **Live Streaming** an
         s(t) = (1/N) * sum_{j=0}^{N-1} m(t - j)  (Past & current samples only)
                    │
                    ▼
-     3. Adaptive Threshold Computation (T(t))
+     3. Adaptive Threshold Computation & Stationary Gate (T(t))
         • Algorithm A (Midpoint): T(t) = [max(window) + min(window)] / 2
         • Algorithm B (Mean + k·SD): T(t) = mean(window) + k * std(window)
+        • Stationary Noise Gate: Requires window spread (max - min) >= minWindowSpreadMps2 (1.2 m/s²)
         Window spans [t - windowDurationMs, t] (includes current candidate sample, no future samples)
                    │
                    ▼
