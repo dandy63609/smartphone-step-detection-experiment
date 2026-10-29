@@ -1,0 +1,49 @@
+{
+  "categories": [
+    {
+      "title": "## 🚀 What's New",
+      "labels": ["feat"]
+    },
+    {
+      "title": "## 🐛 Bug Fixes",
+      "labels": ["fix"]
+    },
+    {
+      "title": "## 🛠 Maintenance & Refactor",
+      "labels": ["refactor", "chore"]
+    },
+    {
+      "title": "## 📚 Documentation",
+      "labels": ["docs"]
+    }
+  ],
+  "label_extractor": [
+    {
+      "pattern": "^(feat)(?:\\([^)]*\\))?!?:\\s.*",
+      "target": "$1",
+      "on_property": "title",
+      "flags": "i"
+    },
+    {
+      "pattern": "^(fix)(?:\\([^)]*\\))?!?:\\s.*",
+      "target": "$1",
+      "on_property": "title",
+      "flags": "i"
+    },
+    {
+      "pattern": "^(refactor|chore)(?:\\([^)]*\\))?!?:\\s.*",
+      "target": "$1",
+      "on_property": "title",
+      "flags": "i"
+    },
+    {
+      "pattern": "^(docs)(?:\\([^)]*\\))?!?:\\s.*",
+      "target": "$1",
+      "on_property": "title",
+      "flags": "i"
+    }
+  ],
+  "ignore_labels": [],
+  "commit_template": "- #{{TITLE}}",
+  "template": "#{{CHANGELOG}}\n\n### ❓ Other Changes\n#{{UNCATEGORIZED}}\n\n---\n*Note: This changelog was automatically generated from commit messages with Github Action.*"
+}
