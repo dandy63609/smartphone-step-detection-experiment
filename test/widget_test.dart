@@ -20,6 +20,9 @@ class MockRecordingStore implements RecordingStore {
         _items.map((r) => r.recordingId),
         date,
       );
+
+  @override
+  Future<void> clearAll() async => _items.clear();
 }
 
 void main() {

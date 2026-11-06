@@ -114,6 +114,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
   late final TextEditingController _postHogKeyController;
 
   bool _exportingCsv = false;
+  bool _clearingSamples = false;
   String? _statusMessage;
   bool _statusIsError = false;
 
@@ -240,18 +241,102 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
     }
   }
 
+  Future<void> _clearAllSamples() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: StradioColors.surfaceDark,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(StradioRadii.card),
+          side: const BorderSide(color: StradioColors.borderDark),
+        ),
+        title: Text(
+          'Hapus Semua Sampel?',
+          style: StradioTypography.soraHeading(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: StradioColors.warmIvory,
+          ),
+        ),
+        content: Text(
+          'Tindakan ini akan menghapus semua file rekaman sampel sensor yang tersimpan secara lokal dan mengulang dari awal.',
+          style: StradioTypography.interBody(
+            fontSize: 13,
+            color: StradioColors.mutedIvory,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Batal',
+              style: StradioTypography.interLabel(
+                fontSize: 14,
+                color: StradioColors.mutedIvory,
+              ),
+            ),
+          ),
+          FilledButton(
+            key: const Key('confirm_clear_samples_button'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: StradioColors.sonicCoral,
+              foregroundColor: StradioColors.midnight,
+            ),
+            child: Text(
+              'Hapus',
+              style: StradioTypography.soraHeading(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: StradioColors.midnight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _clearingSamples = true;
+      _statusMessage = null;
+      _statusIsError = false;
+    });
+
+    try {
+      await widget.store.clearAll();
+      if (!mounted) return;
+      setState(() {
+        _clearingSamples = false;
+        _statusIsError = false;
+        _statusMessage = 'Semua sampel sensor berhasil dihapus. Siap mulai dari awal.';
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _clearingSamples = false;
+        _statusIsError = true;
+        _statusMessage = 'Gagal menghapus sampel: $error';
+      });
+    }
+  }
+
   void _openLegacyExperimentScreen() {
     widget.onBeforeOpenLegacyExperiment?.call();
     final navigator = Navigator.of(context);
     navigator.pop();
-    navigator.push(
-      MaterialPageRoute<void>(
-        builder: (_) => LegacyExperimentShell(
-          store: widget.store,
-          recordingService: widget.recordingService,
+    // Yield a frame before pushing to ensure bottom sheet dismissal completes smoothly without UI hitch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => LegacyExperimentShell(
+            store: widget.store,
+            recordingService: widget.recordingService,
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   @override
@@ -705,7 +790,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                 // 4. Dataset Actions
                 FilledButton.icon(
                   key: const Key('export_full_csv_button'),
-                  onPressed: _exportingCsv ? null : _exportFullDataset,
+                  onPressed: (_exportingCsv || _clearingSamples) ? null : _exportFullDataset,
                   icon: _exportingCsv
                       ? const SizedBox(
                           width: 18,
@@ -720,6 +805,33 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                     _exportingCsv
                         ? 'Exporting Sensor Dataset...'
                         : 'Export Full Sensor Dataset (CSV)',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  key: const Key('clear_all_samples_button'),
+                  onPressed: (_exportingCsv || _clearingSamples) ? null : _clearAllSamples,
+                  icon: _clearingSamples
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: StradioColors.sonicCoral,
+                          ),
+                        )
+                      : const Icon(Icons.delete_sweep_rounded, color: StradioColors.sonicCoral, size: 18),
+                  label: Text(
+                    _clearingSamples ? 'Menghapus Sampel...' : 'Hapus Semua Sampel (Mulai Baru)',
+                    style: StradioTypography.interLabel(
+                      fontSize: 13,
+                      color: StradioColors.sonicCoral,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: StradioColors.sonicCoral.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),

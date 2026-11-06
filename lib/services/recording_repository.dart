@@ -96,6 +96,10 @@ abstract class RecordingStore {
   Future<void> save(SavedRecording recording);
 
   Future<String> nextId(DateTime date);
+
+  /// Clears all stored recordings, allowing researchers or users to reset
+  /// storage and start fresh.
+  Future<void> clearAll();
 }
 
 /// Stores each recording as a JSON file in the app documents folder.
@@ -151,5 +155,20 @@ class FileRecordingStore implements RecordingStore {
           entity.uri.pathSegments.last.replaceAll('.json', ''),
     ];
     return nextRecordingId(ids, date);
+  }
+
+  @override
+  Future<void> clearAll() async {
+    final directory = await _directory();
+    if (!await directory.exists()) return;
+    await for (final entity in directory.list()) {
+      if (entity is File && entity.path.endsWith('.json')) {
+        try {
+          await entity.delete();
+        } on Object {
+          // Ignore deletion error for locked files
+        }
+      }
+    }
   }
 }

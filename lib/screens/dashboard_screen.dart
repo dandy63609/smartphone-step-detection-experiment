@@ -23,6 +23,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   bool _loading = true;
   List<SavedRecording> _recordings = const [];
+  List<ConditionSummary> _cachedConditionSummaries = const [];
+  double? _cachedOverallMeanAccuracy;
 
   @override
   void initState() {
@@ -36,21 +38,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _loading = true);
     final list = await _store.list();
     if (!mounted) return;
+
+    // Compute evaluation results asynchronously so UI thread doesn't freeze with large sample sets
+    final results = <StepCountResult>[
+      for (final r in list) ...evaluateRecording(r),
+    ];
+    final summaries = summarizeConditions(results);
+    final overallAccuracy = results.isEmpty
+        ? null
+        : results.map((r) => r.accuracyPercent).reduce((a, b) => a + b) /
+            results.length;
+
+    if (!mounted) return;
     setState(() {
       _recordings = list;
+      _cachedConditionSummaries = summaries;
+      _cachedOverallMeanAccuracy = overallAccuracy;
       _loading = false;
     });
+  }
+
+  Future<void> _clearAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete All Recordings?'),
+        content: const Text(
+          'This will permanently remove all stored sensor recordings from local storage.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('confirm_delete_all_recordings'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD93025),
+            ),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    setState(() => _loading = true);
+    await _store.clearAll();
+    await _load();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Compute evaluation results for all recordings
-    final allResults = <StepCountResult>[
-      for (final r in _recordings) ...evaluateRecording(r),
-    ];
-    final conditionSummaries = summarizeConditions(allResults);
+    final conditionSummaries = _cachedConditionSummaries;
+    final overallMeanAccuracy = _cachedOverallMeanAccuracy;
 
     // Pilot target: 5 repetitions per condition (40 physical recordings)
     const targetRepsPerCondition = 5;
@@ -59,11 +103,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final completedConditions = conditionSummaries
         .where((c) => c.trials >= targetRepsPerCondition)
         .length;
-
-    final overallMeanAccuracy = allResults.isEmpty
-        ? null
-        : allResults.map((r) => r.accuracyPercent).reduce((a, b) => a + b) /
-              allResults.length;
 
     final canPopInner = Navigator.of(context).canPop();
     final canPopRoot =
@@ -114,6 +153,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.ios_share_rounded),
             tooltip: 'Export CSVs',
           ),
+          if (_recordings.isNotEmpty)
+            IconButton(
+              key: const Key('dashboard_delete_all_button'),
+              onPressed: _clearAll,
+              icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFD93025)),
+              tooltip: 'Delete All Recordings',
+            ),
           IconButton(
             onPressed: _load,
             icon: const Icon(Icons.refresh_rounded),

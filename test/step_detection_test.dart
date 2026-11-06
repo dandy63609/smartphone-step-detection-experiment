@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -444,6 +445,43 @@ void main() {
         'REC_20261026_099', // from previous day
       ];
       expect(nextRecordingId(existing, date), 'REC_20261027_003');
+    });
+
+    test('FileRecordingStore saves and clears all recordings cleanly', () async {
+      final tempDir = await Directory.systemTemp.createTemp('store_test_');
+      try {
+        final store = FileRecordingStore(directory: () async => tempDir);
+        expect(await store.list(), isEmpty);
+
+        const config = ExperimentConfig(
+          participantId: 'P01',
+          activity: Activity.walking,
+          phonePlacement: PhonePlacement.hand,
+          placementDetail: 'right hand',
+          trialNumber: 1,
+          primaryLiveAlgorithm: ThresholdAlgorithm.adaptiveMidpoint,
+        );
+        final rec = SavedRecording(
+          recordingId: 'REC_20261027_001',
+          createdAt: DateTime(2026, 10, 27),
+          config: config,
+          samples: const [],
+          liveStepCount: 0,
+          replayDetections: const {},
+        );
+
+        await store.save(rec);
+        final listAfterSave = await store.list();
+        expect(listAfterSave.length, 1);
+        expect(listAfterSave.first.recordingId, 'REC_20261027_001');
+
+        await store.clearAll();
+        expect(await store.list(), isEmpty);
+      } finally {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      }
     });
   });
 }

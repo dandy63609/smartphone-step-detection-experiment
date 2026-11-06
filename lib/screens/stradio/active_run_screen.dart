@@ -371,6 +371,50 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     _elapsedTimer?.cancel();
     unawaited(_recordingService.stop());
 
+    // Show a smooth non-blocking transition loading overlay while processing large sample batches
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: StradioColors.surfaceDark,
+              borderRadius: BorderRadius.circular(StradioRadii.card),
+              border: Border.all(color: StradioColors.borderDark),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: StradioColors.sonicCoral,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  'Processing Workout Data...',
+                  style: StradioTypography.interBody(
+                    fontSize: 14,
+                    color: StradioColors.warmIvory,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Yield control to UI thread so dialog renders before intensive calculations
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+
     final immutableSamples = List<SensorSample>.unmodifiable(_activeSamples);
     final config = _labSettings.toExperimentConfig();
     final replayBoth = StepDetector.replayBoth(
@@ -409,6 +453,9 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     );
 
     if (!mounted) return;
+    // Dismiss loading dialog
+    Navigator.of(context, rootNavigator: true).pop();
+
     final savedAndFinished = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => PostRunSummaryScreen(

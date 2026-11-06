@@ -23,6 +23,11 @@ class InMemoryRecordingStore implements RecordingStore {
   @override
   Future<String> nextId(DateTime date) async =>
       nextRecordingId(saved.map((r) => r.recordingId), date);
+
+  @override
+  Future<void> clearAll() async {
+    saved.clear();
+  }
 }
 
 void main() {
