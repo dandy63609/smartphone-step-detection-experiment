@@ -164,7 +164,24 @@ Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasi
 
 ---
 
-## 5. Protokol Integritas Eksperimen & Performa Sistem
+## 5. Roadmap Eksekusi (6 Milestone)
+
+1. **Milestone 1 (SELESAI - Commit `9153502`):** Revamp UI `ActiveRunScreen` (`lib/screens/stradio/active_run_screen.dart`).
+   - Hero Waveform Card dengan tombol Play melayang di tengah saat standby, Segmented Utility Pills (BPM, Placement, Algorithm), angka langkah Sora 68px, target 100 langkah fisik, dan secondary metrics card.
+2. **Milestone 2 (Berikutnya):** Revamp UI `PostRunSummaryScreen` (`lib/screens/stradio/post_run_summary_screen.dart`).
+   - Header pencapaian ritmis, Stradio Signature Circular Rhythm Visualizer, matriks statistik latihan (Total Langkah out of 100, Durasi, SPM, Speed, Jarak), grafik konsistensi ritme langkah, mini Scoreboard akurasi 4 algoritma (A1–B2), serta tombol aksi "Save & Finish Workout" non-blocking.
+3. **Milestone 3:** Revamp UI `SensorLabsSheet` (`lib/screens/stradio/sensor_labs_sheet.dart`).
+   - Panel diagnostik biomekanika & instrumen laboratorium eksperimen mengadopsi estetika kartu gelap modern Referensi 1 & 2: Toggle Developer Mode Live Overlay, kartu diagnostik kesehatan sensor (100 Hz latency & zero dropped samples), kalibrasi Target Ground Truth 100 Langkah, pemilih algoritma primer, ekspor dataset CSV lengkap, dan reset data sampel.
+4. **Milestone 4:** `RootNavigationShell` & `HomeScreen`.
+   - Bilah navigasi 5-tab melayang (*Floating Island Bottom Navigation*: Home, Library, **( RUN ) center elevated**, Activity, Settings) dan Dashboard Home pelari dengan sapaan asimetris modern (*"Find Your Rhythm"*) & Quick Actions.
+5. **Milestone 5:** `LibraryScreen`.
+   - Katalog soundscapes reaktif (*Neon Stride 165*, *Tempo Jog 145*, *Lo-Fi Pace 118*, *Cyber Cadence 180*) mengadopsi layout kartu dari Referensi 1 dengan preview beat dan filter chips tempo.
+6. **Milestone 6 (Terakhir):** `ActivityScreen` & `SettingsScreen`.
+   - Riwayat latihan lengkap, analisis target 100 langkah fisik & akurasi error antar-kondisi (E1–E8), serta panel terpadu Settings dan data retention.
+
+---
+
+## 6. Protokol Integritas Eksperimen & Performa Sistem
 
 Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh **integritas riset dan metodologi ilmiah tetap terjaga 100%**:
 
