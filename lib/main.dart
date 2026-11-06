@@ -1,14 +1,63 @@
 import 'package:flutter/material.dart';
 
 import 'screens/dashboard_screen.dart';
+import 'screens/stradio/sensor_labs_sheet.dart';
+import 'screens/stradio/stradio_splash_screen.dart';
+import 'services/export_service.dart';
+import 'services/posthog_service.dart';
 import 'services/recording_repository.dart';
 import 'services/recording_service.dart';
+import 'theme/stradio_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const StepDetectionApp());
+  runApp(const StradioApp());
 }
 
+/// Primary STRADIO application shell ("Stride + Audio: Movement becomes music").
+///
+/// Launches into [StradioSplashScreen] -> [ActiveRunScreen] with access to
+/// [SensorLabsSheet], [PostRunSummaryScreen], and the legacy [DashboardScreen].
+class StradioApp extends StatelessWidget {
+  const StradioApp({
+    super.key,
+    this.store,
+    this.recordingService,
+    this.exportService,
+    this.postHogService,
+    this.splashDuration = const Duration(milliseconds: 1400),
+    this.initialLabSettings = const StradioLabSettings(),
+  });
+
+  final RecordingStore? store;
+  final RecordingService? recordingService;
+  final ExportService? exportService;
+  final PostHogTelemetryService? postHogService;
+  final Duration splashDuration;
+  final StradioLabSettings initialLabSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Stradio',
+      debugShowCheckedModeBanner: false,
+      theme: StradioTheme.darkTheme,
+      darkTheme: StradioTheme.darkTheme,
+      themeMode: ThemeMode.dark,
+      home: StradioSplashScreen(
+        splashDuration: splashDuration,
+        store: store,
+        recordingService: recordingService,
+        exportService: exportService,
+        postHogService: postHogService,
+        initialLabSettings: initialLabSettings,
+      ),
+    );
+  }
+}
+
+/// Legacy Experiment Application shell preserved for direct E1-E8 laboratory
+/// matrix testing and backward-compatible widget test suites.
 class StepDetectionApp extends StatelessWidget {
   const StepDetectionApp({
     super.key,
@@ -23,8 +72,7 @@ class StepDetectionApp extends StatelessWidget {
   static const Color googleSurface = Color(0xFFF8FAFD);
   static const Color googleCardSurface = Color(0xFFF0F4F9);
 
-  @override
-  Widget build(BuildContext context) {
+  static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: googleBlue,
       brightness: Brightness.light,
@@ -37,100 +85,105 @@ class StepDetectionApp extends StatelessWidget {
       surfaceContainerHighest: const Color(0xFFDDE5F2),
     );
 
-    return MaterialApp(
-      title: 'Step Detection Experiment',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: colorScheme,
-        scaffoldBackgroundColor: googleSurface,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: googleSurface,
-          surfaceTintColor: Colors.transparent,
-          scrolledUnderElevation: 0,
-          centerTitle: false,
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: googleSurface,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: googleSurface,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        elevation: 0,
+        titleTextStyle: TextStyle(
+          color: Color(0xFF1F1F1F),
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
+        ),
+        iconTheme: IconThemeData(color: Color(0xFF444746)),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFE1E6EF), width: 1),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF3F6FC),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFDADCE0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFDADCE0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: googleBlue, width: 2),
+        ),
+        labelStyle: const TextStyle(
+          color: Color(0xFF444746),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: googleBlue,
+          foregroundColor: Colors.white,
           elevation: 0,
-          titleTextStyle: TextStyle(
-            color: Color(0xFF1F1F1F),
-            fontSize: 20,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 15,
             fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
-          ),
-          iconTheme: IconThemeData(color: Color(0xFF444746)),
-        ),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          color: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: Color(0xFFE1E6EF), width: 1),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFF3F6FC),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFDADCE0)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFDADCE0)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: googleBlue, width: 2),
-          ),
-          labelStyle: const TextStyle(
-            color: Color(0xFF444746),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: googleBlue,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.1,
-            ),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: googleBlue,
-            side: const BorderSide(color: Color(0xFFDADCE0)),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        floatingActionButtonTheme: FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFFD3E3FD),
-          foregroundColor: const Color(0xFF041E49),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            letterSpacing: 0.1,
           ),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: googleBlue,
+          side: const BorderSide(color: Color(0xFFDADCE0)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: const Color(0xFFD3E3FD),
+        foregroundColor: const Color(0xFF041E49),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Step Detection Experiment',
+      debugShowCheckedModeBanner: false,
+      theme: lightTheme,
       home: DashboardScreen(
         store: store,
         recordingService: recordingService,

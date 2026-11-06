@@ -65,8 +65,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : allResults.map((r) => r.accuracyPercent).reduce((a, b) => a + b) /
               allResults.length;
 
+    final canPopInner = Navigator.of(context).canPop();
+    final canPopRoot =
+        Navigator.maybeOf(context, rootNavigator: true)?.canPop() ?? false;
+
     return Scaffold(
       appBar: AppBar(
+        leading: (!canPopInner && canPopRoot)
+            ? BackButton(
+                key: const Key('legacy_dashboard_back_button'),
+                onPressed: () =>
+                    Navigator.of(context, rootNavigator: true).pop(),
+              )
+            : null,
         title: Row(
           children: [
             Container(
