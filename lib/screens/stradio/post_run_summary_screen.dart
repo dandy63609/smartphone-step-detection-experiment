@@ -165,11 +165,8 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                               tooltip: 'Discard / Back to Run',
                               style: IconButton.styleFrom(
                                 backgroundColor: StradioColors.surfaceDark,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    StradioRadii.control,
-                                  ),
-                                  side: const BorderSide(
+                                shape: const CircleBorder(
+                                  side: BorderSide(
                                     color: StradioColors.borderDark,
                                   ),
                                 ),
@@ -198,11 +195,8 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                               tooltip: 'Share Workout',
                               style: IconButton.styleFrom(
                                 backgroundColor: StradioColors.surfaceDark,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    StradioRadii.control,
-                                  ),
-                                  side: const BorderSide(
+                                shape: const CircleBorder(
+                                  side: BorderSide(
                                     color: StradioColors.borderDark,
                                   ),
                                 ),
@@ -367,13 +361,11 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Primary glowing button "Save & Finish Workout"
+                          // Primary glowing button "Save & Finish Workout" (Stadium Pill per Reference 1)
                           DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: StradioColors.heroGradient,
-                              borderRadius: BorderRadius.circular(
-                                StradioRadii.control,
-                              ),
+                              borderRadius: BorderRadius.circular(999),
                               boxShadow: [
                                 BoxShadow(
                                   color: StradioColors.sonicCoral.withValues(
@@ -391,7 +383,8 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                 backgroundColor: Colors.transparent,
                                 shadowColor: Colors.transparent,
                                 foregroundColor: StradioColors.midnight,
-                                minimumSize: const Size.fromHeight(54),
+                                minimumSize: const Size.fromHeight(56),
+                                shape: const StadiumBorder(),
                               ),
                               child: Text(
                                 _saving
@@ -405,10 +398,18 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          TextButton.icon(
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
                             key: const Key('share_workout_button'),
                             onPressed: _shareWorkout,
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                              shape: const StadiumBorder(),
+                              side: const BorderSide(
+                                color: StradioColors.borderDark,
+                              ),
+                              foregroundColor: StradioColors.warmIvory,
+                            ),
                             icon: const Icon(Icons.share_outlined, size: 18),
                             label: Text(
                               'Share Workout',

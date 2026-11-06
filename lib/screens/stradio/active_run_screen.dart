@@ -774,10 +774,10 @@ class _ActiveRunTopBar extends StatelessWidget {
         // Left: Activity status with SOLID status dot (no endless pulse per R-19/R-37)
         Flexible(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: StradioColors.surfaceDark,
-              borderRadius: BorderRadius.circular(StradioRadii.control),
+              borderRadius: BorderRadius.circular(999),
               border: Border.all(color: StradioColors.borderDark),
             ),
             child: Row(
@@ -792,7 +792,7 @@ class _ActiveRunTopBar extends StatelessWidget {
                     color: dotColor,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     statusLabel,
@@ -821,9 +821,8 @@ class _ActiveRunTopBar extends StatelessWidget {
             style: IconButton.styleFrom(
               backgroundColor: StradioColors.surfaceDark,
               minimumSize: const Size(48, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(StradioRadii.control),
-                side: const BorderSide(color: StradioColors.borderDark),
+              shape: const CircleBorder(
+                side: BorderSide(color: StradioColors.borderDark),
               ),
             ),
             icon: const Icon(
@@ -1120,10 +1119,10 @@ class _UtilityPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(minHeight: 38),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: StradioColors.surfaceDark,
-        borderRadius: BorderRadius.circular(StradioRadii.tag),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: StradioColors.borderDark),
       ),
       child: Row(
@@ -1622,13 +1621,13 @@ class _BottomControlDeck extends StatelessWidget {
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 44),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
+                    horizontal: 14,
                     vertical: 8,
                   ),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: StradioColors.surfaceSubtle,
-                    borderRadius: BorderRadius.circular(StradioRadii.control),
+                    borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: StradioColors.borderDark),
                   ),
                   child: Row(
@@ -1720,14 +1719,13 @@ class _FinishRunButton extends StatelessWidget {
       label: 'Finish Run',
       child: Material(
         color: StradioColors.surfaceSubtle,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(StradioRadii.control),
-          side: const BorderSide(color: StradioColors.borderDark),
+        shape: const StadiumBorder(
+          side: BorderSide(color: StradioColors.borderDark),
         ),
         child: InkWell(
           key: const Key('finish_run_button'),
           onTap: onFinishRun,
-          borderRadius: BorderRadius.circular(StradioRadii.control),
+          customBorder: const StadiumBorder(),
           child: SizedBox(
             height: 56,
             child: Center(
