@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../evaluation/run_metrics_calculator.dart';
+import '../../evaluation/step_count_evaluation.dart';
 import '../../models/experiment_models.dart';
 import '../../services/posthog_service.dart';
 import '../../services/recording_repository.dart';
@@ -127,6 +128,8 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
     final avgSpmText = '${m.averageCadenceSpm.round()} AVG SPM';
     final distanceText = '${m.distanceKm.toStringAsFixed(2)} KM DISTANCE';
     final rhythmPercent = m.rhythmScorePercent.round();
+    final benchmarkResults = evaluateRecordingAllFour(widget.recording);
+    final errorPercent = (m.totalSteps - widget.recording.config.targetSteps).toDouble();
 
     return Scaffold(
       backgroundColor: StradioColors.midnight,
@@ -142,11 +145,84 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                 constraints: const BoxConstraints(maxWidth: 960),
                 child: Column(
                   children: [
+                    // Minimalist Top Header Bar
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPad,
+                        12,
+                        horizontalPad,
+                        8,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Semantics(
+                            button: true,
+                            label: 'Return to Run',
+                            child: IconButton(
+                              key: const Key('summary_back_button'),
+                              onPressed: () => Navigator.of(context).pop(false),
+                              tooltip: 'Discard / Back to Run',
+                              style: IconButton.styleFrom(
+                                backgroundColor: StradioColors.surfaceDark,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    StradioRadii.control,
+                                  ),
+                                  side: const BorderSide(
+                                    color: StradioColors.borderDark,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.arrow_back_rounded,
+                                color: StradioColors.warmIvory,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'POST-RUN INSIGHTS',
+                            style: StradioTypography.interLabel(
+                              fontSize: 11,
+                              color: StradioColors.mutedIvory,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          Semantics(
+                            button: true,
+                            label: 'Share Workout',
+                            child: IconButton(
+                              key: const Key('summary_top_share_button'),
+                              onPressed: _shareWorkout,
+                              tooltip: 'Share Workout',
+                              style: IconButton.styleFrom(
+                                backgroundColor: StradioColors.surfaceDark,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    StradioRadii.control,
+                                  ),
+                                  side: const BorderSide(
+                                    color: StradioColors.borderDark,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.share_outlined,
+                                color: StradioColors.sonicCoral,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                     Expanded(
                       child: SingleChildScrollView(
                         padding: EdgeInsets.fromLTRB(
                           horizontalPad,
-                          20,
+                          12,
                           horizontalPad,
                           16,
                         ),
@@ -185,11 +261,13 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 20),
 
-                            // 1. Main Stat Hero Card (#2A2B3D)
+                            // 1. Main Stat Hero Card with 100-step benchmark error
                             _MainStatHeroCard(
                               stepsLabel: '$formattedSteps STEPS',
+                              targetSteps: widget.recording.config.targetSteps,
+                              errorPercent: errorPercent,
                               durationLabel: '${m.formattedDuration} DURATION',
                               spmLabel: avgSpmText,
                               distanceLabel: distanceText,
@@ -230,6 +308,13 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                 targetBpm: m.targetBpm,
                               ),
                             ],
+                            const SizedBox(height: 16),
+
+                            // 4. Research Benchmark: 4-Algorithm Replay Scoreboard
+                            _AlgorithmBenchmarkScoreboardCard(
+                              results: benchmarkResults,
+                              targetSteps: widget.recording.config.targetSteps,
+                            ),
 
                             if (_feedbackMessage != null) ...[
                               const SizedBox(height: 16),
@@ -350,6 +435,8 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
 class _MainStatHeroCard extends StatelessWidget {
   const _MainStatHeroCard({
     required this.stepsLabel,
+    required this.targetSteps,
+    required this.errorPercent,
     required this.durationLabel,
     required this.spmLabel,
     required this.distanceLabel,
@@ -357,6 +444,8 @@ class _MainStatHeroCard extends StatelessWidget {
   });
 
   final String stepsLabel;
+  final int targetSteps;
+  final double errorPercent;
   final String durationLabel;
   final String spmLabel;
   final String distanceLabel;
@@ -364,35 +453,96 @@ class _MainStatHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final absError = errorPercent.abs();
+    final signPrefix = errorPercent > 0 ? '+' : (errorPercent < 0 ? '-' : '');
+
     return Container(
       padding: EdgeInsets.all(isTablet ? 24 : 20),
       decoration: BoxDecoration(
         color: StradioColors.surfaceDark,
         borderRadius: BorderRadius.circular(StradioRadii.hero),
         border: Border.all(color: StradioColors.borderDark),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'TOTAL WORKOUT ACHIEVEMENTS',
-            style: StradioTypography.interLabel(
-              fontSize: 11,
-              color: StradioColors.mutedIvory,
-              letterSpacing: 1.0,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'TOTAL WORKOUT ACHIEVEMENTS',
+                style: StradioTypography.interLabel(
+                  fontSize: 11,
+                  color: StradioColors.mutedIvory,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: StradioColors.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(StradioRadii.tag),
+                  border: Border.all(color: StradioColors.borderDark),
+                ),
+                child: Text(
+                  '100 Steps Benchmark',
+                  style: StradioTypography.interLabel(
+                    fontSize: 10,
+                    color: StradioColors.rhythmViolet,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          Text(
-            stepsLabel,
-            key: const Key('summary_steps_headline'),
-            style: StradioTypography.soraMetric(
-              fontSize: isTablet ? 42 : 34,
-              fontWeight: FontWeight.w800,
-              color: StradioColors.warmIvory,
-            ),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 4,
+            children: [
+              Text(
+                stepsLabel,
+                key: const Key('summary_steps_headline'),
+                style: StradioTypography.soraMetric(
+                  fontSize: isTablet ? 42 : 34,
+                  fontWeight: FontWeight.w800,
+                  color: StradioColors.warmIvory,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: absError <= 2.0
+                      ? StradioColors.statusLive.withValues(alpha: 0.16)
+                      : StradioColors.sonicCoral.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(StradioRadii.tag),
+                  border: Border.all(
+                    color: absError <= 2.0
+                        ? StradioColors.statusLive.withValues(alpha: 0.4)
+                        : StradioColors.sonicCoral.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Text(
+                  'Target: $targetSteps ($signPrefix${absError.toStringAsFixed(1)}% err)',
+                  style: StradioTypography.interLabel(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: absError <= 2.0
+                        ? StradioColors.statusLive
+                        : StradioColors.sonicCoral,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           const Divider(color: StradioColors.borderDark, height: 1),
           const SizedBox(height: 16),
           Wrap(
@@ -415,6 +565,165 @@ class _MainStatHeroCard extends StatelessWidget {
                 subtitle: 'Estimated Distance',
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlgorithmBenchmarkScoreboardCard extends StatelessWidget {
+  const _AlgorithmBenchmarkScoreboardCard({
+    required this.results,
+    required this.targetSteps,
+  });
+
+  final List<StepCountResult> results;
+  final int targetSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: StradioColors.surfaceDark,
+        borderRadius: BorderRadius.circular(StradioRadii.card),
+        border: Border.all(color: StradioColors.borderDark),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '4-ALGORITHM EVALUATION BENCHMARK',
+                  style: StradioTypography.interLabel(
+                    fontSize: 11,
+                    color: StradioColors.mutedIvory,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: StradioColors.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(StradioRadii.tag),
+                  border: Border.all(color: StradioColors.borderDark),
+                ),
+                child: Text(
+                  'Target: $targetSteps Steps',
+                  style: StradioTypography.interLabel(
+                    fontSize: 10,
+                    color: StradioColors.rhythmViolet,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Compares detected step counts against the physical 100-step ground truth across all 4 algorithmic pipelines.',
+            style: StradioTypography.interBody(
+              fontSize: 12,
+              color: StradioColors.mutedIvory,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...results.map((r) => _AlgorithmResultRow(result: r)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlgorithmResultRow extends StatelessWidget {
+  const _AlgorithmResultRow({required this.result});
+
+  final StepCountResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final (badgeColor, badgeTextColor) = switch (result.status) {
+      DetectionStatus.accurate => (
+        StradioColors.statusLive.withValues(alpha: 0.16),
+        StradioColors.statusLive,
+      ),
+      DetectionStatus.overcounting => (
+        StradioColors.sonicCoral.withValues(alpha: 0.16),
+        StradioColors.sonicCoral,
+      ),
+      DetectionStatus.undercounting => (
+        StradioColors.rhythmViolet.withValues(alpha: 0.16),
+        StradioColors.rhythmViolet,
+      ),
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: StradioColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(StradioRadii.control),
+        border: Border.all(color: StradioColors.borderDark),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+            decoration: BoxDecoration(
+              color: StradioColors.surfaceDark,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: StradioColors.borderDark),
+            ),
+            child: Text(
+              result.variantCode,
+              style: StradioTypography.soraHeading(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: StradioColors.warmIvory,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  result.variantDisplayName,
+                  style: StradioTypography.interBody(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: StradioColors.warmIvory,
+                  ),
+                ),
+                Text(
+                  '${result.predictedSteps} steps (${result.marginOfErrorPercent.toStringAsFixed(1)}% error)',
+                  style: StradioTypography.interLabel(
+                    fontSize: 11,
+                    color: StradioColors.mutedIvory,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: badgeColor,
+              borderRadius: BorderRadius.circular(StradioRadii.tag),
+            ),
+            child: Text(
+              result.status.label,
+              style: StradioTypography.interLabel(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: badgeTextColor,
+              ),
+            ),
           ),
         ],
       ),

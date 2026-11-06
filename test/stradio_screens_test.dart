@@ -146,10 +146,16 @@ void main() {
         find.text('Run Complete! : You Found Your Rhythm'),
         findsOneWidget,
       );
+      expect(find.byKey(const Key('summary_back_button')), findsOneWidget);
+      expect(find.byKey(const Key('summary_top_share_button')), findsOneWidget);
       expect(find.byKey(const Key('summary_steps_headline')), findsOneWidget);
       expect(find.byKey(const Key('rhythm_score_headline')), findsOneWidget);
       expect(
         find.text('Cadence Consistency Across Run (SPM)'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('4-ALGORITHM EVALUATION BENCHMARK'),
         findsOneWidget,
       );
       expect(find.text('Save & Finish Workout'), findsOneWidget);
