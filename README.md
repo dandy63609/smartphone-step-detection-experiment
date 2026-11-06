@@ -65,6 +65,94 @@ Or download the latest pre-built **`step-detection-v*-arm64-v8a.apk`** directly 
 
 ---
 
+## Glossary & Biomechanical-Audio Concepts
+
+A comprehensive reference for developers, researchers, and collaborators explaining all technical terms, biomechanical metrics, signal processing pipelines, and audio-stride engine concepts used in the repository:
+
+### 1. Biomechanical & Motion Dynamics
+
+- **SPM (Steps Per Minute / Cadence):**
+  The physical frequency of foot strikes per minute executed by the runner or walker. Calculated in real time over rolling time windows from peak-to-peak step intervals.
+  $$\text{SPM} = \frac{60}{\Delta t_{\text{step}}(\text{seconds})}$$
+- **Ground Truth 100 Steps ($N_{\text{true}} = 100$):**
+  The fixed physical benchmark used for all trials. The participant performs exactly 100 physical steps counted manually and confirmed upon stopping. Because $N_{\text{true}} = 100$, any error count translates directly to a percentage without scaling:
+  $$\text{Margin of Error (\%)} = |N_{\text{predicted}} - 100|\%$$
+- **Phone Placement (`hand` vs. `pocket`):**
+  Standardized carrying locations. Hand-held simulates typical smartphone use with arm swing dynamics; pocket placement isolates hip and leg translation while damping rotational noise.
+- **Estimated Running Speed:**
+  Cadence-driven instantaneous velocity approximation ($v = \text{SPM} \times \text{stride\_length}$) calibrated for walking ($\approx 0.65\ \text{m/step}$) and jogging ($\approx 0.90\ \text{m/step}$).
+
+### 2. Audio-Stride & Music Engine
+
+- **BPM (Beats Per Minute / Music Tempo):**
+  The musical tempo of the synthesizer or audio track. Stradio couples BPM to physical cadence so music tempo tracks runner stride.
+- **Audio-Stride Reactive Engine:**
+  The proprietary closed-loop system where IMU sensor step events dynamically synchronize audio tempo, triggering reactive drum beats and synthesizer pulses locked to foot-strike impacts ($\text{BPM} \approx \text{SPM}$).
+- **Soundscape Presets:**
+  Pre-composed reactive audio environments calibrated to specific cadence envelopes:
+  - **Lo-Fi Pace (118 BPM):** Relaxed cadence for warm-ups and brisk walking (110–125 SPM).
+  - **Tempo Jog (145 BPM):** Mid-intensity endurance jogging (140–155 SPM).
+  - **Neon Stride (165 BPM):** High-cadence rhythmic running preset (160–175 SPM).
+  - **Cyber Cadence (180 BPM):** High-efficiency athletic cadence for 5K/10K pacing.
+
+### 3. Signal Processing & Sensor Telemetry
+
+- **3-Axis Raw Accelerometer ($a_x, a_y, a_z$):**
+  Tri-axial acceleration in $\text{m/s}^2$ including gravity vector ($\approx 9.81\ \text{m/s}^2$ when stationary).
+- **Linear / User Accelerometer ($u_x, u_y, u_z$):**
+  Acceleration in $\text{m/s}^2$ with earth gravity computationally removed via device sensor-fusion algorithms.
+- **Euclidean Vector Norm / Magnitude ($m(t)$):**
+  Orientation-independent scalar total acceleration:
+  $$m(t) = \sqrt{a_x(t)^2 + a_y(t)^2 + a_z(t)^2}$$
+- **Causal Moving-Average Filter:**
+  Low-pass smoothing filter using strictly past and present samples (3-sample window) to remove high-frequency MEMS jitter without introducing look-ahead bias:
+  $$s(t) = \frac{1}{N}\sum_{i=0}^{N-1} m(t - i)$$
+- **Rolling Threshold Window ($T_w = 1000\ \text{ms}$):**
+  A 1-second sliding memory buffer of smoothed magnitude values used to calculate the real-time threshold $T(t)$.
+- **Stationary Noise Gate (`minWindowSpreadMps2 = 1.2` $\text{m/s}^2$):**
+  Safety threshold spread ($\max - \min$). If acceleration variation inside the 1-second window is less than $1.2\ \text{m/s}^2$ (e.g. resting on a desk or holding still), step detection is locked and the waveform renders as a flat line to eliminate false counts from micro-vibrations.
+- **Refractory Lockout Period (250 ms):**
+  Minimum physiological duration between consecutive foot strikes ($\le 240\ \text{SPM}$). Peaks occurring within 250 ms of an accepted step are rejected as secondary bounces or arm swings.
+- **Valley Confirmation & Hysteresis:**
+  Before a new peak can be accepted, the smoothed magnitude signal must drop below a valley threshold, ensuring the gait cycle enters the swing/flight phase before the next foot impact.
+
+### 4. 4-Algorithm Matrix (A1, A2, B1, B2)
+
+- **A1 — Adaptive Midpoint (Raw):**
+  $$T(t) = \frac{\max(\text{window}) + \min(\text{window})}{2}$$
+  Computed over raw accelerometer magnitude ($+g$). Rapidly adapts to changes in vertical amplitude.
+- **A2 — Adaptive Midpoint (Linear):**
+  Same midpoint formula applied to linear acceleration ($-g$). Evaluates whether eliminating gravity baseline reduces posture-tilt artifacts.
+- **B1 — Mean + $k\cdot\text{SD}$ (Raw):**
+  $$T(t) = \mu(\text{window}) + k \cdot \sigma(\text{window}),\quad k = 1.5$$
+  Statistical threshold requiring foot strikes to exceed the mean by $1.5$ standard deviations. Resilient against gradual drift.
+- **B2 — Mean + $k\cdot\text{SD}$ (Linear):**
+  Statistical deviation threshold on pure linear acceleration.
+
+### 5. Evaluation Metrics & Classifications
+
+- **Absolute Step Error:**
+  $$\text{Absolute Error} = |N_{\text{predicted}} - N_{\text{true}}| = |N_{\text{predicted}} - 100|$$
+- **Percentage Margin of Error:**
+  $$\text{Margin of Error (\%)} = \left(\frac{|N_{\text{predicted}} - 100|}{100}\right) \times 100\% = |N_{\text{predicted}} - 100|\%$$
+- **Step Count Accuracy:**
+  $$\text{Accuracy (\%)} = \max\left(0, 100\% - \text{Margin of Error (\%)}\right)$$
+- **Scoreboard Performance Classification:**
+  - **`Akurat` (Accurate):** $\text{Margin of Error} \le 3.0\%$ (97 to 103 detected steps).
+  - **`Overcounting`:** $N_{\text{predicted}} > 103$ steps (detector too sensitive or counting bounces).
+  - **`Undercounting`:** $N_{\text{predicted}} < 97$ steps (threshold too high or missed foot strikes).
+
+### 6. Telemetry & Export Schema
+
+- **PostHog Cloud Telemetry:**
+  Structured product events (`run_started`, `run_paused`, `run_resumed`, `step_milestone_reached`, `run_completed`) providing cohort tracking and latency metrics.
+- **`sensor_data.csv`:**
+  High-frequency 100 Hz timeseries logging `recording_id`, `sample_index`, `timestamp_ns`, `activity`, `phone_placement`, raw axes ($a_x, a_y, a_z$), and Euclidean magnitude.
+- **`evaluation_summary.csv`:**
+  Trial-level performance benchmark comparing predicted steps against 100 ground truth steps for each algorithm variant.
+
+---
+
 ## Dart API & Algorithmic Signal Processing
 
 ```dart

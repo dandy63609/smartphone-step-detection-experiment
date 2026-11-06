@@ -74,10 +74,17 @@ void main() {
       expect(find.text('Neon Stride : 165 BPM'), findsOneWidget);
       expect(find.text('Finish Run'), findsOneWidget);
 
-      // Start step detection by tapping Play
-      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      // Verify Milestone 1 additions: Center Hero Play Button in Standby & Segmented Utility Bar
+      expect(find.byKey(const Key('hero_center_play_button')), findsOneWidget);
+      expect(find.byKey(const Key('utility_bpm_selector_button')), findsOneWidget);
+      expect(find.text('A1 Midpoint'), findsOneWidget);
+
+      // Start step detection by tapping the Hero Center Play Button (Reference 2 behavior)
+      await tester.tap(find.byKey(const Key('hero_center_play_button')));
       await tester.pump();
       expect(find.text('RUNNING'), findsOneWidget);
+      // While running, center button fades away so the multi-layer waveform animates freely
+      expect(find.byKey(const Key('hero_center_play_button')), findsNothing);
 
       // 3. Open Screen 4: Sensor Labs & Diagnostics Bottom Sheet
       await tester.tap(find.byKey(const Key('open_sensor_labs_button')));

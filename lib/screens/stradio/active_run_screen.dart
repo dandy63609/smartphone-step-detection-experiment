@@ -631,9 +631,27 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                                   _latestPrimaryOutput?.isStationary ?? true,
                               stepFlashActive: stepFlashActive,
                               targetBpm: _labSettings.targetBpm,
-                              height: isTablet ? 200 : 168,
+                              height: isTablet ? 210 : 178,
+                              onCenterPlayTap: _togglePauseResume,
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
+
+                            // Segmented Utility Bar: Tempo (BPM), Placement, and Algorithm
+                            _SegmentedUtilityBar(
+                              targetBpm: _labSettings.targetBpm,
+                              placementText:
+                                  '${_labSettings.phonePlacement.value.toUpperCase()} · ${_labSettings.placementDetail.isEmpty ? "RIGHT" : _labSettings.placementDetail.toUpperCase()}',
+                              algorithmCode: _primaryVariant.code,
+                              algorithmName: _primaryVariant.displayName,
+                              onSelectBpm: (bpm) {
+                                setState(() {
+                                  _labSettings = _labSettings.copyWith(
+                                    targetBpm: bpm,
+                                  );
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 18),
 
                             // Prominent Digital Readouts: Huge Primary Step Metric
                             Column(
@@ -642,7 +660,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                                   formattedSteps,
                                   key: const Key('active_run_step_count'),
                                   style: StradioTypography.soraMetric(
-                                    fontSize: isTablet ? 76 : 64,
+                                    fontSize: isTablet ? 76 : 68,
                                     fontWeight: FontWeight.w800,
                                     color: stepFlashActive
                                         ? StradioColors.sonicCoral
@@ -660,19 +678,31 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  primarySteps == 0
-                                      ? 'Walk or jog to begin live step detection (Benchmark target: ${_labSettings.targetSteps} steps)'
-                                      : 'Detected: $primarySteps / Target: ${_labSettings.targetSteps} (${_labSettings.activity.value.toUpperCase()} · ${_labSettings.phonePlacement.value.toUpperCase()})',
-                                  textAlign: TextAlign.center,
-                                  style: StradioTypography.interBody(
-                                    fontSize: 12,
-                                    color: StradioColors.mutedIvory,
-                                  ),
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 4,
+                                  runSpacing: 2,
+                                  children: [
+                                    Text(
+                                      primarySteps == 0
+                                          ? 'Walk or jog to begin detection (Target: ${_labSettings.targetSteps} steps)'
+                                          : 'Detected: $primarySteps / Target: ${_labSettings.targetSteps} Steps (${_labSettings.activity.value.toUpperCase()})',
+                                      textAlign: TextAlign.center,
+                                      style: StradioTypography.interBody(
+                                        fontSize: 12,
+                                        color: StradioColors.mutedIvory,
+                                      ),
+                                    ),
+                                    const _MicroInfoTooltip(
+                                      tooltipText:
+                                          'Ground Truth Benchmark: Exactly 100 physical steps to calculate error margin percentage.',
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 18),
 
                             // Secondary Runner Metrics Card: SPM, Time Elapsed, Speed km/h
                             _SecondaryMetricsBar(
@@ -869,6 +899,7 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
     required this.stepFlashActive,
     required this.targetBpm,
     required this.height,
+    this.onCenterPlayTap,
   });
 
   final List<double> magnitudes;
@@ -878,6 +909,7 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
   final bool stepFlashActive;
   final int targetBpm;
   final double height;
+  final VoidCallback? onCenterPlayTap;
 
   @override
   Widget build(BuildContext context) {
@@ -942,17 +974,226 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: CustomPaint(
-                painter: _TopographicalWaveformPainter(
-                  magnitudes: magnitudes,
-                  thresholds: thresholds,
-                  isRunning: isRunning,
-                  isStationary: isStationary,
-                  stepFlashActive: stepFlashActive && !reduceMotion,
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _TopographicalWaveformPainter(
+                        magnitudes: magnitudes,
+                        thresholds: thresholds,
+                        isRunning: isRunning,
+                        isStationary: isStationary,
+                        stepFlashActive: stepFlashActive && !reduceMotion,
+                      ),
+                    ),
+                  ),
+
+                  // Floating Center Play CTA when Standby/Paused (Adopting Reference 2)
+                  if (!isRunning && onCenterPlayTap != null)
+                    Semantics(
+                      button: true,
+                      label: 'Start Workout and Reactive Beats',
+                      child: Material(
+                        color: Colors.transparent,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          key: const Key('hero_center_play_button'),
+                          onTap: onCenterPlayTap,
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: StradioColors.sonicCoral,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: StradioColors.sonicCoral.withValues(
+                                    alpha: 0.40,
+                                  ),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 34,
+                              color: StradioColors.midnight,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SegmentedUtilityBar extends StatelessWidget {
+  const _SegmentedUtilityBar({
+    required this.targetBpm,
+    required this.placementText,
+    required this.algorithmCode,
+    required this.algorithmName,
+    required this.onSelectBpm,
+  });
+
+  final int targetBpm;
+  final String placementText;
+  final String algorithmCode;
+  final String algorithmName;
+  final ValueChanged<int> onSelectBpm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: [
+        // Pill 1: BPM with selection dropdown & micro info tooltip
+        PopupMenuButton<int>(
+          key: const Key('utility_bpm_selector_button'),
+          tooltip: 'Select Target BPM',
+          onSelected: onSelectBpm,
+          color: StradioColors.surfaceDark,
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: 118, child: Text('118 BPM (Brisk Walk)')),
+            PopupMenuItem(value: 145, child: Text('145 BPM (Tempo Jog)')),
+            PopupMenuItem(value: 165, child: Text('165 BPM (Neon Stride)')),
+          ],
+          child: _UtilityPill(
+            icon: Icons.music_note_rounded,
+            iconColor: StradioColors.rhythmViolet,
+            label: '$targetBpm BPM',
+            hasChevron: true,
+            tooltipText:
+                'BPM (Beats Per Minute): Audio tempo synchronizing reactive beats.',
+          ),
+        ),
+
+        // Pill 2: Phone Placement
+        _UtilityPill(
+          icon: Icons.smartphone_rounded,
+          iconColor: StradioColors.warmIvory,
+          label: placementText,
+          tooltipText:
+              'Placement: Standardized device location (hand or pocket) for sensor fidelity.',
+        ),
+
+        // Pill 3: Primary Algorithm
+        _UtilityPill(
+          icon: Icons.analytics_outlined,
+          iconColor: StradioColors.sonicCoral,
+          label: '$algorithmCode Midpoint',
+          tooltipText:
+              'Algorithm: Active real-time step detector ($algorithmName).',
+        ),
+      ],
+    );
+  }
+}
+
+class _UtilityPill extends StatelessWidget {
+  const _UtilityPill({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    this.hasChevron = false,
+    required this.tooltipText,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final bool hasChevron;
+  final String tooltipText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 38),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: StradioColors.surfaceDark,
+        borderRadius: BorderRadius.circular(StradioRadii.tag),
+        border: Border.all(color: StradioColors.borderDark),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: StradioTypography.interLabel(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: StradioColors.warmIvory,
+              letterSpacing: 0.3,
+            ),
+          ),
+          if (hasChevron) ...[
+            const SizedBox(width: 3),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 14,
+              color: StradioColors.mutedIvory,
+            ),
+          ],
+          const SizedBox(width: 6),
+          _MicroInfoTooltip(tooltipText: tooltipText),
+        ],
+      ),
+    );
+  }
+}
+
+class _MicroInfoTooltip extends StatelessWidget {
+  const _MicroInfoTooltip({
+    required this.tooltipText,
+  });
+
+  final String tooltipText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltipText,
+      triggerMode: TooltipTriggerMode.tap,
+      waitDuration: Duration.zero,
+      showDuration: const Duration(seconds: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: StradioColors.surfaceDark,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: StradioColors.borderDark),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      textStyle: StradioTypography.interBody(
+        fontSize: 12,
+        color: StradioColors.warmIvory,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(2.0),
+        child: Icon(
+          Icons.info_outline_rounded,
+          size: 13,
+          color: StradioColors.mutedIvory.withValues(alpha: 0.75),
         ),
       ),
     );
@@ -1081,6 +1322,8 @@ class _SecondaryMetricsBar extends StatelessWidget {
               valueKey: const Key('metric_cadence_value'),
               label: 'CADENCE',
               value: cadenceText,
+              tooltip:
+                  'SPM (Steps Per Minute): Real-time physical foot strike rate.',
             ),
           ),
           Container(width: 1, height: 34, color: StradioColors.borderDark),
@@ -1089,6 +1332,7 @@ class _SecondaryMetricsBar extends StatelessWidget {
               valueKey: const Key('metric_elapsed_value'),
               label: 'TIME ELAPSED',
               value: elapsedText,
+              tooltip: 'Elapsed active workout session duration.',
             ),
           ),
           Container(width: 1, height: 34, color: StradioColors.borderDark),
@@ -1097,6 +1341,8 @@ class _SecondaryMetricsBar extends StatelessWidget {
               valueKey: const Key('metric_speed_value'),
               label: 'SPEED',
               value: speedText,
+              tooltip:
+                  'Estimated velocity calculated from live cadence and stride length.',
             ),
           ),
         ],
@@ -1110,14 +1356,48 @@ class _SecondaryMetricItem extends StatelessWidget {
     required this.valueKey,
     required this.label,
     required this.value,
+    this.tooltip,
   });
 
   final Key valueKey;
   final String label;
   final String value;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
+    Widget labelWidget = Text(
+      label,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: StradioTypography.interLabel(
+        fontSize: 10,
+        color: StradioColors.mutedIvory,
+        letterSpacing: 0.8,
+      ),
+    );
+
+    if (tooltip != null) {
+      labelWidget = Tooltip(
+        message: tooltip!,
+        triggerMode: TooltipTriggerMode.tap,
+        waitDuration: Duration.zero,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        decoration: BoxDecoration(
+          color: StradioColors.surfaceDark,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: StradioColors.borderDark),
+        ),
+        textStyle: StradioTypography.interBody(
+          fontSize: 12,
+          color: StradioColors.warmIvory,
+        ),
+        child: labelWidget,
+      );
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1132,15 +1412,7 @@ class _SecondaryMetricItem extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: StradioTypography.interLabel(
-            fontSize: 10,
-            color: StradioColors.mutedIvory,
-            letterSpacing: 0.8,
-          ),
-        ),
+        labelWidget,
       ],
     );
   }
