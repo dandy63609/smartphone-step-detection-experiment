@@ -61,13 +61,18 @@ void main() {
       await tester.pump(const Duration(milliseconds: 150));
       await tester.pumpAndSettle();
 
-      // 2. Verify Screen 2: Active Run & Reactive Music Screen
-      expect(find.text('RUNNING'), findsOneWidget);
+      // 2. Verify Screen 2: Active Run & Reactive Music Screen (defaults to step detection OFF/PAUSED)
+      expect(find.text('PAUSED'), findsOneWidget);
       expect(find.byKey(const Key('status_indicator_dot')), findsOneWidget);
       expect(find.text('STEPS'), findsOneWidget);
       expect(find.byKey(const Key('active_run_step_count')), findsOneWidget);
       expect(find.text('Neon Stride : 165 BPM'), findsOneWidget);
       expect(find.text('Finish Run'), findsOneWidget);
+
+      // Start step detection by tapping Play
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
 
       // 3. Open Screen 4: Sensor Labs & Diagnostics Bottom Sheet
       await tester.tap(find.byKey(const Key('open_sensor_labs_button')));
@@ -322,7 +327,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 80));
         await tester.pumpAndSettle();
 
-        expect(find.text('STRADIO'), findsOneWidget);
+        expect(find.text('PAUSED'), findsOneWidget);
         expect(find.text('Finish Run'), findsOneWidget);
         expect(tester.takeException(), isNull);
       }

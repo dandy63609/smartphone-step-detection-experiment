@@ -81,7 +81,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
 
   Timer? _elapsedTimer;
   double _activeDurationSeconds = 0.0;
-  double _finishSlideProgress = 0.0;
+  bool _hasStartedRun = false;
 
   @override
   void initState() {
@@ -123,7 +123,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     _latestSample = null;
     _latestPrimaryOutput = null;
     _activeDurationSeconds = 0.0;
-    _finishSlideProgress = 0.0;
+    _hasStartedRun = false;
   }
 
   AlgorithmVariant get _primaryVariant =>
@@ -187,19 +187,9 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       );
 
       setState(() {
-        _streamState = _RunStreamState.running;
+        _streamState = _RunStreamState.paused;
         _sensorErrorText = null;
       });
-
-      _startElapsedTicker();
-
-      unawaited(
-        _postHogService.captureRunStarted(
-          recordingId: _recordingId,
-          config: _labSettings.toExperimentConfig(),
-          targetBpm: _labSettings.targetBpm,
-        ),
-      );
     } on Object catch (error) {
       setState(() {
         _streamState = _RunStreamState.sensorError;
@@ -350,18 +340,30 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         ),
       );
     } else {
+      final isFirstStart = !_hasStartedRun;
+      _hasStartedRun = true;
       setState(() {
         _streamState = _RunStreamState.running;
       });
       _startElapsedTicker();
-      unawaited(
-        _postHogService.captureRunResumed(
-          recordingId: _recordingId,
-          participantId: _labSettings.participantId,
-          elapsedSeconds: _activeDurationSeconds,
-          currentSteps: _primaryDetections.length,
-        ),
-      );
+      if (isFirstStart) {
+        unawaited(
+          _postHogService.captureRunStarted(
+            recordingId: _recordingId,
+            config: _labSettings.toExperimentConfig(),
+            targetBpm: _labSettings.targetBpm,
+          ),
+        );
+      } else {
+        unawaited(
+          _postHogService.captureRunResumed(
+            recordingId: _recordingId,
+            participantId: _labSettings.participantId,
+            elapsedSeconds: _activeDurationSeconds,
+            currentSteps: _primaryDetections.length,
+          ),
+        );
+      }
     }
   }
 
@@ -431,7 +433,6 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     } else {
       // Resume session if user navigated back without resetting
       setState(() {
-        _finishSlideProgress = 0.0;
         _streamState = _RunStreamState.paused;
       });
     }
@@ -579,6 +580,8 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                               thresholds: _recentThresholds.toList(),
                               isRunning:
                                   _streamState == _RunStreamState.running,
+                              isStationary:
+                                  _latestPrimaryOutput?.isStationary ?? true,
                               stepFlashActive: stepFlashActive,
                               targetBpm: _labSettings.targetBpm,
                               height: isTablet ? 200 : 168,
@@ -648,7 +651,6 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                       child: _BottomControlDeck(
                         isRunning: _streamState == _RunStreamState.running,
                         targetBpm: _labSettings.targetBpm,
-                        slideProgress: _finishSlideProgress,
                         onSelectBpm: (bpm) {
                           setState(() {
                             _labSettings = _labSettings.copyWith(
@@ -657,11 +659,6 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                           });
                         },
                         onTogglePauseResume: _togglePauseResume,
-                        onSlideChanged: (val) {
-                          setState(() {
-                            _finishSlideProgress = val;
-                          });
-                        },
                         onFinishRun: _finishRun,
                       ),
                     ),
@@ -735,24 +732,6 @@ class _ActiveRunTopBar extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-
-        // Center: Elegant STRADIO wordmark
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'STRADIO',
-              style: StradioTypography.soraHeading(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: StradioColors.warmIvory,
-                letterSpacing: 3.0,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
 
         // Right: Accessible Labs / Experiment beaker flask icon
         Semantics(
@@ -839,6 +818,7 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
     required this.magnitudes,
     required this.thresholds,
     required this.isRunning,
+    required this.isStationary,
     required this.stepFlashActive,
     required this.targetBpm,
     required this.height,
@@ -847,6 +827,7 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
   final List<double> magnitudes;
   final List<double> thresholds;
   final bool isRunning;
+  final bool isStationary;
   final bool stepFlashActive;
   final int targetBpm;
   final double height;
@@ -918,6 +899,8 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
                 painter: _TopographicalWaveformPainter(
                   magnitudes: magnitudes,
                   thresholds: thresholds,
+                  isRunning: isRunning,
+                  isStationary: isStationary,
                   stepFlashActive: stepFlashActive && !reduceMotion,
                 ),
               ),
@@ -933,11 +916,15 @@ class _TopographicalWaveformPainter extends CustomPainter {
   const _TopographicalWaveformPainter({
     required this.magnitudes,
     required this.thresholds,
+    required this.isRunning,
+    required this.isStationary,
     required this.stepFlashActive,
   });
 
   final List<double> magnitudes;
   final List<double> thresholds;
+  final bool isRunning;
+  final bool isStationary;
   final bool stepFlashActive;
 
   @override
@@ -951,6 +938,18 @@ class _TopographicalWaveformPainter extends CustomPainter {
       ..strokeWidth = 1.0;
     canvas.drawLine(Offset(0, midY), Offset(size.width, midY), horizonPaint);
 
+    var minV = magnitudes.isNotEmpty ? magnitudes.first : 0.0;
+    var maxV = magnitudes.isNotEmpty ? magnitudes.first : 0.0;
+    for (final v in magnitudes) {
+      if (v < minV) minV = v;
+      if (v > maxV) maxV = v;
+    }
+    final rawSpan = maxV - minV;
+    // When resting on a table (or stationary or paused), signal spread is minimal (< 0.4 m/s²).
+    // In that case, render completely still/horizontal straight lines across the horizon.
+    final isActuallyStill =
+        !isRunning || isStationary || magnitudes.length < 2 || rawSpan < 0.40;
+
     // Draw 3 layered topographical ribbon waves driven by real sensor samples
     for (var layer = 0; layer < 3; layer++) {
       final path = Path();
@@ -959,16 +958,12 @@ class _TopographicalWaveformPainter extends CustomPainter {
         1 => 0.68,
         _ => 0.42,
       };
-      final phaseShift = layer * 0.65;
 
-      if (magnitudes.length >= 2) {
-        var minV = magnitudes.first;
-        var maxV = magnitudes.first;
-        for (final v in magnitudes) {
-          if (v < minV) minV = v;
-          if (v > maxV) maxV = v;
-        }
-        final span = math.max(1.8, maxV - minV);
+      if (isActuallyStill) {
+        path.moveTo(0, midY);
+        path.lineTo(size.width, midY);
+      } else {
+        final span = math.max(6.0, rawSpan);
         final centerVal = (maxV + minV) / 2;
 
         for (var i = 0; i < magnitudes.length; i++) {
@@ -977,30 +972,11 @@ class _TopographicalWaveformPainter extends CustomPainter {
             -0.95,
             0.95,
           );
-          final harmonic = math.sin((i * 0.25) + phaseShift) * 0.14;
           final boost = stepFlashActive ? 1.15 : 1.0;
           final y =
               midY -
-              ((normalized + harmonic) *
-                  (size.height * 0.40) *
-                  scaleFactor *
-                  boost);
+              (normalized * (size.height * 0.40) * scaleFactor * boost);
           if (i == 0) {
-            path.moveTo(x, y);
-          } else {
-            path.lineTo(x, y);
-          }
-        }
-      } else {
-        // Calm resting topographical contour when awaiting sensor samples
-        for (var x = 0.0; x <= size.width; x += 4.0) {
-          final norm = x / size.width;
-          final envelope = math.sin(norm * math.pi);
-          final y =
-              midY +
-              math.sin(norm * math.pi * 4 + phaseShift) *
-                  (size.height * 0.18 * scaleFactor * envelope);
-          if (x == 0) {
             path.moveTo(x, y);
           } else {
             path.lineTo(x, y);
@@ -1026,6 +1002,8 @@ class _TopographicalWaveformPainter extends CustomPainter {
   bool shouldRepaint(covariant _TopographicalWaveformPainter oldDelegate) =>
       oldDelegate.magnitudes != magnitudes ||
       oldDelegate.thresholds != thresholds ||
+      oldDelegate.isRunning != isRunning ||
+      oldDelegate.isStationary != isStationary ||
       oldDelegate.stepFlashActive != stepFlashActive;
 }
 
@@ -1255,19 +1233,15 @@ class _BottomControlDeck extends StatelessWidget {
   const _BottomControlDeck({
     required this.isRunning,
     required this.targetBpm,
-    required this.slideProgress,
     required this.onSelectBpm,
     required this.onTogglePauseResume,
-    required this.onSlideChanged,
     required this.onFinishRun,
   });
 
   final bool isRunning;
   final int targetBpm;
-  final double slideProgress;
   final ValueChanged<int> onSelectBpm;
   final VoidCallback onTogglePauseResume;
-  final ValueChanged<double> onSlideChanged;
   final VoidCallback onFinishRun;
 
   @override
@@ -1302,14 +1276,6 @@ class _BottomControlDeck extends StatelessWidget {
                       style: StradioTypography.soraHeading(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Reactive Beat & Melody Engine: Scheduled Next Week',
-                      style: StradioTypography.interBody(
-                        fontSize: 11,
-                        color: StradioColors.mutedIvory,
                       ),
                     ),
                   ],
@@ -1370,7 +1336,7 @@ class _BottomControlDeck extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // Controls Row: Glowing Circular Pause/Resume Button + Sleek Finish Run Slider/Button
+          // Controls Row: Glowing Circular Pause/Resume Button + Sleek Finish Run Button
           Row(
             children: [
               // Glowing circular Pause / Resume button in vibrant Sonic Coral
@@ -1407,11 +1373,9 @@ class _BottomControlDeck extends StatelessWidget {
               ),
               const SizedBox(width: 14),
 
-              // Sleek "Finish Run" Slider + Accessible Tap/Keyboard Button
+              // Sleek "Finish Run" Accessible Button (Clean, without inner stop box)
               Expanded(
-                child: _FinishRunSliderControl(
-                  progress: slideProgress,
-                  onChanged: onSlideChanged,
+                child: _FinishRunButton(
                   onFinishRun: onFinishRun,
                 ),
               ),
@@ -1423,94 +1387,44 @@ class _BottomControlDeck extends StatelessWidget {
   }
 }
 
-class _FinishRunSliderControl extends StatelessWidget {
-  const _FinishRunSliderControl({
-    required this.progress,
-    required this.onChanged,
+class _FinishRunButton extends StatelessWidget {
+  const _FinishRunButton({
     required this.onFinishRun,
   });
 
-  final double progress;
-  final ValueChanged<double> onChanged;
   final VoidCallback onFinishRun;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxDrag = math.max(1.0, constraints.maxWidth - 56.0);
-        return Semantics(
-          button: true,
-          label: 'Finish Run',
-          child: Material(
-            color: StradioColors.surfaceSubtle,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(StradioRadii.control),
-              side: const BorderSide(color: StradioColors.borderDark),
-            ),
-            child: InkWell(
-              key: const Key('finish_run_button'),
-              onTap: onFinishRun,
-              borderRadius: BorderRadius.circular(StradioRadii.control),
-              child: SizedBox(
-                height: 56,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Stack(
-                    alignment: Alignment.centerLeft,
-                    children: [
-                      Center(
-                        child: Text(
-                          'Finish Run',
-                          style: StradioTypography.soraHeading(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: StradioColors.warmIvory,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ),
-                      Transform.translate(
-                        offset: Offset(progress * maxDrag, 0),
-                        child: GestureDetector(
-                          onHorizontalDragUpdate: (details) {
-                            final delta = details.primaryDelta ?? 0.0;
-                            final next =
-                                (progress + (delta / maxDrag)).clamp(0.0, 1.0);
-                            onChanged(next);
-                          },
-                          onHorizontalDragEnd: (_) {
-                            if (progress >= 0.65) {
-                              onFinishRun();
-                            } else {
-                              onChanged(0.0);
-                            }
-                          },
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: StradioColors.borderDark.withValues(
-                                alpha: 0.65,
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.stop_rounded,
-                              color: StradioColors.warmIvory,
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+    return Semantics(
+      button: true,
+      label: 'Finish Run',
+      child: Material(
+        color: StradioColors.surfaceSubtle,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(StradioRadii.control),
+          side: const BorderSide(color: StradioColors.borderDark),
+        ),
+        child: InkWell(
+          key: const Key('finish_run_button'),
+          onTap: onFinishRun,
+          borderRadius: BorderRadius.circular(StradioRadii.control),
+          child: SizedBox(
+            height: 56,
+            child: Center(
+              child: Text(
+                'Finish Run',
+                style: StradioTypography.soraHeading(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: StradioColors.warmIvory,
+                  letterSpacing: 0.4,
                 ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
