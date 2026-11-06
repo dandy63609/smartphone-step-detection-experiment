@@ -115,45 +115,51 @@ Layar saat ini (`ActiveRunScreen`) berfungsi ganda: sebagai pemutar lari aktif b
 
 ## 4. Rencana Navigasi & Layar Masa Depan (MVP Roadmap)
 
-Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasikan, aplikasi akan dibungkus dengan **Root Shell Navigation** yang menggunakan bilah navigasi melayang (*Floating Island Bottom Navigation* sesuai Referensi 2):
+Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasikan, aplikasi akan dibungkus dengan **Root Shell Navigation** yang menggunakan bilah navigasi melayang (*Floating Island Bottom Navigation* sesuai Referensi 2) dengan struktur **5-Tab Gold Standard**:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│                  KONTEN LAYAR AKTIF                     │
-│               (Home / Library / Stats)                  │
-│                                                         │
-├─────────────────────────────────────────────────────────┤
-│  ┌───────────────────────────────────────────────────┐  │
-│  │ 🏃 Run    🎵 Soundscapes    📊 Activity    ⚙ Labs │  │
-│  └───────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                                                               │
+│                   KONTEN LAYAR YANG AKTIF                     │
+│                                                               │
+├───────────────────────────────────────────────────────────────┤
+│    ┌─────────────────────────────────────────────────────┐    │
+│    │   🏠         🎵           ╭─────╮         📊        ⚙️   │    │
+│    │  Home     Library         │ RUN │      Activity  Settings│    │
+│    │                           ╰─────╯                    │    │
+│    └─────────────────────────────────────────────────────┘    │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-### 4 Layar Utama Aplikasi:
+### 5 Bagian Utama Navigasi (Kiri ke Kanan):
 
-#### 1. Tab `Run` (Home / Active Session)
-- **Kondisi Idle:** Dashboard pelari dengan sapaan asimetris modern (*"Find Your Rhythm"*), kartu preset lari cepat (Quick Run 100 Langkah, Brisk Walk 118 BPM, Tempo Jog 145 BPM), dan visualizer interaktif.
-- **Kondisi Running:** Transisi mulus ke antarmuka *Active Workout* (Layar 3 di atas) tanpa distraksi tab.
+#### 1. Tab `Home` (Dashboard & Penemuan)
+- **Header Asimetris:** Sapaan modern (*"Good Morning / Find Your Rhythm"*) dengan profil avatar mini dan indikator status kesiapan sensor IMU.
+- **Kartu Ringkasan:** Rekap capaian lari mingguan, *quick stats*, dan skor konsistensi ritme terakhir.
+- **Quick Start Actions:** Pilihan preset lari cepat (100 Langkah Fisik, Brisk Walk 118 BPM, Tempo Jog 145 BPM).
 
-#### 2. Tab `Soundscapes` (Library Lagu / Beat Generator)
+#### 2. Tab `Library` (Koleksi Tema Musik Reaktif)
 - Mengadopsi struktur kartu vertikal dan horizontal dari **Referensi 1 (Layar 2 & 3)**.
-- Katalog tema musik reaktif:
+- Katalog tema soundscape reaktif yang menyesuaikan ketukan dengan langkah kaki:
   - **Neon Stride (165 BPM):** Synthwave berenergi tinggi untuk jogging cepat.
   - **Lo-Fi Pace (118 BPM):** Beat santai untuk jalan santai dan pemanasan.
-  - **Cyber Cadence (145 BPM):** Ketukan ritmis elektronik untuk lari jarak jauh.
-- Setiap kartu memiliki preview audio, indikator kecocokan irama langkah, dan tombol favorit.
+  - **Cyber Cadence (145 BPM):** Ketukan ritmis elektronik untuk lari jarak jauh tempo stabil.
+- Setiap kartu memiliki preview audio, filter genre/tempo, dan tombol favorit.
 
-#### 3. Tab `Activity` (History & Benchmark Scoreboard)
-- Riwayat seluruh sesi latihan dan eksperimen yang tersimpan di memori lokal.
-- Ringkasan pencapaian akurasi terhadap ground truth 100 langkah fisik.
-- Grafik konsistensi ritme (*Signature Rhythm Score*) per sesi latihan.
+#### 3. Center Elevated Action: `( RUN )` (Tombol Aksi Utama)
+- **Desain & Ergonomi:** Berada tepat di tengah bilah navigasi bawah, berukuran lebih besar (56–64px), sedikit menonjol melayang (*elevated floating action button*), dan berwarna **Sonic Coral (`#FF765F`)**.
+- **Fungsi:** Merupakan pemicu aksi cepat instan (*instant primary CTA*) yang paling mudah dijangkau jempol satu tangan. Menekan tombol ini langsung membuka sesi lari aktif (`ActiveRunScreen`) untuk mulai melangkah.
 
-#### 4. Tab `Labs & Settings` (Developer & Research Hub)
-- Panel kontrol telemetri PostHog Cloud (Project API Key, status sinkronisasi event live).
-- Uji perbandingan 4 algoritma paralel (`A1`, `A2`, `B1`, `B2`).
-- Fitur **Ekspor Dataset CSV** (`sensor_data.csv` & `evaluation_summary.csv`).
-- Fitur **Hapus Semua Sampel** untuk mereset penyimpanan dan memulai dari awal.
+#### 4. Tab `Activity` (Histori, Analisis & Scoreboard Riset)
+- Riwayat seluruh sesi latihan dan rekaman eksperimen yang tersimpan di memori lokal.
+- Ringkasan pencapaian akurasi terhadap ground truth 100 langkah fisik (Margin of Error %).
+- Grafik visual *Signature Rhythm Score* dan konsistensi cadence antar sesi.
+
+#### 5. Tab `Settings` (Pengaturan, Labs & Telemetri)
+- **Sensor Labs & Diagnostik IMU:** Uji komparasi 4 algoritma paralel (`A1`, `A2`, `B1`, `B2`).
+- **PostHog Cloud Telemetry:** Konfigurasi Project API Key dan status event synchronization.
+- **Dataset Actions:** Ekspor dataset CSV lengkap (`sensor_data.csv` & `evaluation_summary.csv`).
+- **Manajemen Penyimpanan:** Fitur *Hapus Semua Sampel* untuk membersihkan file JSON lokal dan mereset dari awal.
 - Akses ke antarmuka riset Legacy Material 3.
 
 ---
