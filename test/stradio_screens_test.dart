@@ -7,6 +7,7 @@ import 'package:smartphone_step_detection_experiment/screens/dashboard_screen.da
 import 'package:smartphone_step_detection_experiment/services/posthog_service.dart';
 import 'package:smartphone_step_detection_experiment/services/recording_repository.dart';
 import 'package:smartphone_step_detection_experiment/services/recording_service.dart';
+import 'package:smartphone_step_detection_experiment/widgets/stradio_logo_widget.dart';
 
 class InMemoryRecordingStore implements RecordingStore {
   final List<SavedRecording> saved = [];
@@ -51,8 +52,9 @@ void main() {
         ),
       );
 
-      // 1. Verify Screen 1: Minimalist Splash Screen
-      expect(find.text('STRADIO'), findsOneWidget);
+      // 1. Verify Screen 1: Minimalist Splash Screen (logo only per user preference)
+      expect(find.byType(StradioLogoWidget), findsOneWidget);
+      expect(find.text('STRADIO'), findsNothing);
       expect(find.byKey(const Key('splash_screen_tap_area')), findsOneWidget);
 
       // Advance past splash screen into Screen 2: ActiveRunScreen

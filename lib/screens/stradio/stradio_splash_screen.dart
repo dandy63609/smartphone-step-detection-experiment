@@ -108,9 +108,8 @@ class _StradioSplashScreenState extends State<StradioSplashScreen> {
                 final isTablet = constraints.maxWidth >= 600;
                 return StradioLogoWidget(
                   size: isTablet ? 168 : 138,
-                  showWordmark: true,
-                  showAmbientGlow: true,
-                  wordmarkFontSize: isTablet ? 34 : 28,
+                  showWordmark: false,
+                  showAmbientGlow: false,
                 );
               },
             ),
