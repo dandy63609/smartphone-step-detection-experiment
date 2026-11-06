@@ -1,97 +1,168 @@
-# Rencana Eksperimen: Komparasi Algoritma Deteksi Langkah Real-Time & Pipeline CI/CD
+# Stradio: Product Roadmap, UI Revamp & Navigation Architecture
 
-Dokumen ini memuat rencana kerja teknis untuk eksperimen deteksi langkah pada repositori `smartphone-step-detection-experiment`, mencakup desain algoritma, protokol pengujian 100 langkah fisik, serta arsitektur **CI/CD, Security Guard (Gitleaks), Optimasi Ukuran APK, dan Distribusi Otomatis via GitHub Releases**.
-
----
-
-## 1. Fokus & Keputusan Teknis Eksperimen
-
-1. **Uji 100 Langkah Fisik (*Ground Truth* Mutlak):**
-   * Penguji memegang/mengantongi ponsel sambil menghitung manual tepat 100 langkah.
-   * Toleransi error diukur langsung: $\text{Margin Error (\%)} = \frac{|\text{Langkah Terdeteksi} - 100|}{100} \times 100\%$.
-2. **Stationary Noise Gate & Kunci Skala Grafik:**
-   * Saat ponsel diletakkan diam di atas meja, *thermal micro-noise* MEMS ($\approx \pm 0.03\ \text{m/s}^2$ di sekitar $9.81\ \text{m/s}^2$) diblokir oleh `minWindowSpreadMps2 = 1.2` $\text{m/s}^2$ sehingga deteksi langkah tetap **0 langkah** dan grafik *live* tetap berupa garis lurus stabil, sementara sampel mentah 100 Hz tetap terekam utuh ke `sensor_data.csv`.
-3. **4 Kombinasi Algoritma Berjalan Serentak (*Apple-to-Apple*):**
-   * Sekali sesi jalan 100 langkah merekam kedua stream sensor (`Raw Accelerometer` + `User Accelerometer`) dan langsung diproses oleh 4 kombinasi algoritma (`A1`, `A2`, `B1`, `B2`) secara paralel.
-4. **Penundaan Background Foreground Service:**
-   * Karena durasi tes 100 langkah hanya berlangsung singkat (~1–1,5 menit), layar ponsel dibiarkan tetap menyala. Foreground service persisten ditunda hingga tahap pengembangan audio di masa mendatang.
-5. **UI Google Material Design 3 (Google Fit / Health Connect Style):**
-   * Seluruh layar (`DashboardScreen`, `SetupScreen`, `LiveRecordingScreen`, `ResultsScreen`, `ExportScreen`) menggunakan tema Material 3 dengan warna Google Blue (`#1A73E8`), *SegmentedButton*, *Circular Step Gauge*, serta *Scoreboard* 4 algoritma.
+> **"Stride + Audio: Movement Becomes Music"**  
+> Dokumen ini memuat cetak biru teknis dan arsitektur desain antarmuka (UI/UX) untuk aplikasi **Stradio**. Dokumen ini menggabungkan sains eksperimen biomekanika langkah kaki (*adaptive threshold algorithms*) dengan pengalaman pemutar musik reaktif (*reactive sports-music audio app*).
 
 ---
 
-## 2. Matriks 4 Kombinasi Algoritma yang Diuji
+## 1. Visi Produk & Filosofi Desain
 
-Data percepatan dibaca melalui dua stream dari hardware:
-* **Stream A (Raw Accelerometer):** Menyertakan gravitasi bumi ($\approx 9.8\ \text{m/s}^2$).
-* **Stream B (User Accelerometer / Linear):** Gravitasi telah dieliminasi oleh OS ($\approx 0.0\ \text{m/s}^2$ saat diam), dilengkapi *causal low-pass gravity filter fallback*.
+Stradio adalah aplikasi kebugaran generasi baru yang menyelaraskan setiap langkah lari pengguna dengan ritme musik adaptif. Pendekatan desain Stradio menolak tampilan eksperimen yang kaku maupun *AI visual slop*, melainkan mengadopsi standar desain produk kelas dunia (*crafted by a designer*) dengan kontras tinggi, navigasi ergonomis untuk jempol saat bergerak, serta hierarki visual yang bernapas (*spacious and focused*).
 
-Keempat kombinasi yang dievaluasi secara paralel pada setiap sesi rekaman:
+### Brand Identity & Design Tokens
 
-| Kode | Algoritma Ambang | Input Sensor | Karakteristik yang Diuji |
-| :---: | :--- | :--- | :--- |
-| **A1** | **Adaptive Midpoint** $\frac{\max + \min}{2}$ | Raw Accelerometer (dengan gravitasi) | Baseline eksperimen awal. |
-| **A2** | **Adaptive Midpoint** $\frac{\max + \min}{2}$ | User Accelerometer (tanpa gravitasi) | Menguji apakah eliminasi gravitasi menstabilkan midpoint. |
-| **B1** | **Mean + $k \times \text{StdDev}$** | Raw Accelerometer (dengan gravitasi) | Sensitivitas terhadap deviasi lonjakan hentakan. |
-| **B2** | **Mean + $k \times \text{StdDev}$** | User Accelerometer (tanpa gravitasi) | Kombinasi modern (sinyal dinamis murni). |
+* **Color Palette (Stradio 03 Palette):**
+  * **Midnight (`#191923`):** Kanvas gelap utama yang mendalam dan hemat daya layar OLED.
+  * **Warm Ivory (`#F5F0E8`):** Tipografi utama untuk keterbacaan tinggi tanpa membuat mata lelah.
+  * **Sonic Coral (`#FF765F`):** Warna energi utama untuk tombol *Play/Pause*, *pulse impact*, dan aksi primer.
+  * **Rhythm Violet (`#A995DB`):** Aksen harmonis untuk indikator tempo BPM, gelombang frekuensi, dan labs.
+  * **Supporting Indigo (`#46509E`):** Warna penopang gradien untuk kartu visualizer dan elemen status.
+  * **Surface Dark (`#232331`) & Surface Subtle (`#2D2E40`):** Lapisan kartu bertingkat dengan border halus `borderDark` (`#37384E`).
 
----
-
-## 3. Tahapan Implementasi Teknis
-
-### Fase 1: Perbaikan Noise Diam & Redesign UI Material 3 (Selesai ✅)
-- [x] Tambahkan *Stationary Noise Gate* (`minWindowSpreadMps2 = 1.2` $\text{m/s}^2$) pada `StepDetector` agar HP diam di meja menghasilkan 0 langkah.
-- [x] Kunci rentang skala vertikal minimum (`6.0` $\text{m/s}^2$) pada grafik `LiveRecordingScreen` serta tampilkan indikator status `Stationary (Idle)` vs `Motion Active`.
-- [x] Rombak seluruh UI ke Google Material Design 3 (Google Fit / Health Connect aesthetic).
-- [x] Tambahkan *unit test* 30 detik (3.000 sampel) untuk memvalidasi 0 *false positive* saat HP diam di meja.
-
-### Fase 2: Perluasan Pipeline Sensor Ganda & Eksekusi 4 Jalur (Selesai ✅)
-- [x] Modifikasi `RecordingService` di `lib/services/recording_service.dart` untuk berlangganan paralel pada `accelerometerEventStream` dan `userAccelerometerEventStream` (dengan *gravity filter fallback*).
-- [x] Adaptasi `StepDetector` (`useLinearAcceleration`) dan tambahkan `StepDetector.replayAllFour()` untuk memproses keempat varian (`A1`, `A2`, `B1`, `B2`) sekaligus.
-
-### Fase 3: Pembaruan UI Scoreboard & Ekspor CSV Lengkap (Selesai ✅)
-- [x] **Layar Hasil Komparasi (4-Algorithm Scoreboard):** Menampilkan tabel perbandingan langsung (`A1`, `A2`, `B1`, `B2`) beserta jumlah langkah, selisih langkah, *Margin of Error (%)*, dan status (`Akurat` / `Overcounting` / `Undercounting`).
-- [x] **Ekspor CSV Lengkap:** Mengekspor `sensor_data.csv` (9 kolom standar), `sensor_linear_data.csv` (dual-stream raw + linear), dan `evaluation_summary.csv` (mencakup keempat varian `A1–B2`).
-
-### Fase 4: Eksekusi Protokol Eksperimen Fisik (100 Langkah — Siap Diuji di Perangkat Фиsik)
-- [ ] **Uji Diam (Baseline Noise - 30 Detik):** HP diletakkan di meja tanpa melangkah (Target: 0 langkah pada A1, A2, B1, B2).
-- [ ] **Uji Jalan 100 Langkah (Posisi Digenggam Tangan & Saku Depan):** Penguji menghitung manual 100 langkah berjalan.
-- [ ] **Uji Jogging 100 Langkah (Posisi Digenggam Tangan & Saku Depan):** Penguji menghitung manual 100 langkah jogging.
+* **Tipografi (Stradio 04 Typography):**
+  * **Sora:** Font display modern, bold, dan punchy untuk angka metrik besar (langkah, BPM) dan judul utama.
+  * **Inter:** Font fungsional dengan legibilitas superior untuk label data, status mikro, dan teks deskripsi.
 
 ---
 
-## 4. Analisis Mengapa File `app-release.apk` Membengkak Jadi 51 MB
+## 2. Acuan Desain Resmi (Visual References)
 
-Saat perintah standar `flutter build apk` dijalankan tanpa flag tambahan, Flutter membuat **Fat APK (`app-release.apk`)** yang menggabungkan **3 binary engine C++ (`libflutter.so`) + kode kompilasi Dart (`libapp.so`)** sekaligus di dalam satu file:
-1. `armeabi-v7a` (HP Android 32-bit lawas)
-2. `arm64-v8a` (HP Android 64-bit modern — 99% HP saat ini)
-3. `x86_64` (Emulator PC/Intel — sama sekali tidak terpakai di HP fisik!)
+Arsitektur UI Stradio mengacu pada dua referensi visual utama yang disimpan di repositori:
 
-Karena 1 arsitektur engine Flutter (Impeller/Skia + Dart AOT runtime) berukuran ~14–16 MB, menggabungkan ketiganya dalam satu APK membuat ukurannya membengkak menjadi **~51 MB**.
+```
+assets/images/
+├── stradio-reference-1.png   (Referensi 1: Ergonomi Layar Player & Library List)
+└── stradio-reference-2.png   (Referensi 2: Hero Waveform Center Play & Floating Navigation)
+```
 
-### Strategi Pemangkasan Ukuran APK (51 MB → ~13–16 MB)
-1. **Split per ABI (`--split-per-abi`):** Memisahkan APK berdasarkan arsitektur CPU sehingga penguji cukup mengunduh `arm64-v8a` tanpa membawa beban binary 32-bit dan emulator x86_64.
-2. **R8 Code & Resource Shrinking (`android/app/build.gradle.kts`):** Mengaktifkan `isMinifyEnabled = true` dan `isShrinkResources = true` pada blok `buildTypes.release`.
-3. **Font Icon Tree-Shaking (`--tree-shake-icons`):** Memangkas ribuan glyph font `MaterialIcons` menjadi hanya ikon yang benar-benar dipanggil di kode Dart.
-4. **Debug Info Separation (`--obfuscate --split-debug-info=build/debug-info`):** Memisahkan tabel simbol debug dari binary `libapp.so`.
+### Referensi 1: `stradio-reference-1.png` (Dribbble Audio & Sports Companion)
+* **Penerapan pada Stradio:**
+  * **Ergonomi Active Session (Layar 1):** Penataan kartu visualizer di bagian atas dengan sudut lengkung besar (~24px), diikuti deretan kapsul utilitas mini horizontal (*segmented utility pills*), serta penempatan tombol aksi besar di area jangkauan jempol bawah.
+  * **Katalog Suara & Riwayat (Layar 2 & 3):** Struktur kartu daftar horizontal (*stacked cards*) dengan thumbnail visual di sisi kiri dan metrik ringkas di sisi kanan, serta baris *filter chips* horizontal di bagian atas (`All`, `Brisk Walk`, `Tempo Jog`, `Neon Stride`).
+
+### Referensi 2: `stradio-reference-2.png` (Pinterest Modern Beat Studio)
+* **Penerapan pada Stradio:**
+  * **Hero Waveform dengan Center Floating Play Button:** Penempatan tombol Play/Pause bulat di pusat area gelombang visualizer audio saat standby. Ketika ditekan, visualizer menjadi hidup dan bergelombang dinamis mengikuti entakan kaki.
+  * **Punchy Asymmetrical Greeting:** Judul header dengan aksen warna ganda: `Find Your` (Warm Ivory) + `Rhythm` (Sonic Coral).
+  * **Quick Actions Row:** Baris kartu tindakan cepat horizontal ber-radius melengkung untuk akses kilat ke preset lari, kalibrasi sensor, atau generator ritme.
+  * **Floating Island Bottom Navigation Bar:** Navigasi bawah melayang (*floating pill*) yang tidak menempel kaku ke dasar layar, memberikan kesan visual modern dan elegan.
 
 ---
 
-## 5. Rencana & Arsitektur GitHub Actions (CI/CD, Security, & Auto-Release)
+## 3. Revamp Layar Saat Ini: Active Run Screen (Semi-Experiment)
 
-Seluruh pipeline otomasi ditempatkan di `.github/workflows/` dengan dua workflow utama dan satu konfigurasi changelog:
+Layar saat ini (`ActiveRunScreen`) berfungsi ganda: sebagai pemutar lari aktif bagi pelari sekaligus instrumen eksperimen biomekanika bagi penguji/peneliti. Revamp dilakukan agar kedua kebutuhan ini menyatu secara harmonis tanpa saling mengganggu.
 
-### A. Workflow 1: `.github/workflows/ci.yml` (CI, Code Check, & Security Guard)
-Berjalan otomatis pada setiap `push` ke semua branch dan `pull_request` ke `main`:
-1. **Job 1 — `sensitive-file-guard`:** Memblokir commit jika ditemukan file sensitif: `.env`, `key.properties`, `*.jks`, `*.keystore`, `google-services.json`, `credentials/`, atau `temp/`.
-2. **Job 2 — `secret-scanning` (Gitleaks):** Menjalankan `gitleaks/gitleaks-action@v2` pada riwayat repositori.
-3. **Job 3 — `flutter-ci`:** Menjalankan `flutter pub get`, `flutter analyze`, dan `flutter test`.
+```
+┌─────────────────────────────────────────────────────────┐
+│ [● LIVE STRIDE]                        [ ⚗ Sensor Labs ]│
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │  AUDIO-STRIDE WAVEFORM             165 BPM      │   │
+│   │                                                 │   │
+│   │          ~~~~~~ ( ▶ PLAY ) ~~~~~~               │   │
+│   │                                                 │   │
+│   └─────────────────────────────────────────────────┘   │
+│                                                         │
+│   [ 165 BPM ]   [ Hand • Right ]   [ Algoritma: A1 ]    │
+│                                                         │
+│                         084                             │
+│                        STEPS                            │
+│           Detected: 84 / Target: 100 Steps              │
+│                                                         │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │   158 AVG SPM   •   04:12 TIME   •   8.4 KM/H   │   │
+│   └─────────────────────────────────────────────────┘   │
+│                                                         │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │  Neon Stride                                    │   │
+│   │  ( ⏸ PAUSE )           [    FINISH RUN    ]     │   │
+│   └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
 
-### B. Workflow 2: `.github/workflows/auto-release.yml` (Build Slim APK & GitHub Release Otomatis)
-Berjalan otomatis setiap kali developer mendorong *git tag* berawalan `v*` (misalnya `v1.0.0`):
-1. Menyiapkan JDK 17 (`temurin`) + Flutter SDK dan menjalankan `flutter test`.
-2. Mengompilasi APK ramping dengan `flutter build apk --release --split-per-abi --tree-shake-icons --obfuscate --split-debug-info=build/debug-info`.
-3. Memberi nama file rilis:
-   - `step-detection-${TAG}-arm64-v8a.apk` *(Utama — ~14-16 MB untuk semua HP Android modern)*
-   - `step-detection-${TAG}-armeabi-v7a.apk` *(Cadangan — untuk HP Android 32-bit lama)*
-4. Membuat **GitHub Release** otomatis dengan changelog (`mikepenz/release-changelog-builder-action@v5`) dan melampirkan kedua file APK (`softprops/action-gh-release@v2`).
+### Rincian Komponen Revamp:
+
+1. **Top Bar Minimalis:**
+   - Sisi kiri: *Live Status Badge* (titik hijau solid untuk lari aktif, titik kuning solid untuk standby/paused).
+   - Sisi kanan: Tombol *Sensor Labs* (ikon tabung reaksi) untuk membuka drawer diagnostik dan ekspor CSV.
+   - Bebas dari judul teks redundan agar layar terasa lapang.
+
+2. **Hero Waveform Card dengan Center Action Button:**
+   - Kartu visualizer berlatar belakang gelap gradien dengan border halus.
+   - Saat kondisi **Standby/Paused**: Menampilkan garis horizon tenang dan tombol **Play bulat Sonic Coral melayang di tengah visualizer** (mengadopsi Referensi 2).
+   - Saat kondisi **Running**: Menampilkan gelombang 3-lapis dinamis yang terhubung langsung dengan sinyal akselerometer 100 Hz. Tombol berpindah ke deck bawah sehingga visualizer bebas menampilkan grafik gerakan secara penuh.
+
+3. **Segmented Utility Capsule Bar:**
+   - Tiga kapsul kontrol horizontal yang rapi (mengadopsi Referensi 1):
+     1. *Target Tempo BPM Selector* (118 / 145 / 165 BPM).
+     2. *Phone Placement Selector* (Hand / Pocket).
+     3. *Active Algorithm Selector* (A1 Midpoint Raw / B1 Mean+SD).
+
+4. **Digital Stride Readout:**
+   - Angka langkah berukuran ekstra besar (Sora 64–72px) dengan animasi transisi angka halus.
+   - Indikator pencapaian target ground truth: `Detected: X / Target: 100 Steps`.
+
+5. **Secondary Performance Bar:**
+   - Tiga metrik pelari dalam satu kartu horizontal: Cadence (SPM), Durasi Berjalan (Menit:Detik), dan Estimasi Kecepatan (km/h).
+
+6. **Bottom Control Deck:**
+   - Tombol bulat **Pause / Resume** berwarna Sonic Coral dengan efek glow lembut.
+   - Tombol **Finish Run** berbentuk pill penuh yang bersih, nyaman ditekan, dan dilengkapi overlay loading non-blocking agar tidak terjadi freeze saat komputasi data besar.
+
+---
+
+## 4. Rencana Navigasi & Layar Masa Depan (MVP Roadmap)
+
+Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasikan, aplikasi akan dibungkus dengan **Root Shell Navigation** yang menggunakan bilah navigasi melayang (*Floating Island Bottom Navigation* sesuai Referensi 2):
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│                  KONTEN LAYAR AKTIF                     │
+│               (Home / Library / Stats)                  │
+│                                                         │
+├─────────────────────────────────────────────────────────┤
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ 🏃 Run    🎵 Soundscapes    📊 Activity    ⚙ Labs │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 4 Layar Utama Aplikasi:
+
+#### 1. Tab `Run` (Home / Active Session)
+- **Kondisi Idle:** Dashboard pelari dengan sapaan asimetris modern (*"Find Your Rhythm"*), kartu preset lari cepat (Quick Run 100 Langkah, Brisk Walk 118 BPM, Tempo Jog 145 BPM), dan visualizer interaktif.
+- **Kondisi Running:** Transisi mulus ke antarmuka *Active Workout* (Layar 3 di atas) tanpa distraksi tab.
+
+#### 2. Tab `Soundscapes` (Library Lagu / Beat Generator)
+- Mengadopsi struktur kartu vertikal dan horizontal dari **Referensi 1 (Layar 2 & 3)**.
+- Katalog tema musik reaktif:
+  - **Neon Stride (165 BPM):** Synthwave berenergi tinggi untuk jogging cepat.
+  - **Lo-Fi Pace (118 BPM):** Beat santai untuk jalan santai dan pemanasan.
+  - **Cyber Cadence (145 BPM):** Ketukan ritmis elektronik untuk lari jarak jauh.
+- Setiap kartu memiliki preview audio, indikator kecocokan irama langkah, dan tombol favorit.
+
+#### 3. Tab `Activity` (History & Benchmark Scoreboard)
+- Riwayat seluruh sesi latihan dan eksperimen yang tersimpan di memori lokal.
+- Ringkasan pencapaian akurasi terhadap ground truth 100 langkah fisik.
+- Grafik konsistensi ritme (*Signature Rhythm Score*) per sesi latihan.
+
+#### 4. Tab `Labs & Settings` (Developer & Research Hub)
+- Panel kontrol telemetri PostHog Cloud (Project API Key, status sinkronisasi event live).
+- Uji perbandingan 4 algoritma paralel (`A1`, `A2`, `B1`, `B2`).
+- Fitur **Ekspor Dataset CSV** (`sensor_data.csv` & `evaluation_summary.csv`).
+- Fitur **Hapus Semua Sampel** untuk mereset penyimpanan dan memulai dari awal.
+- Akses ke antarmuka riset Legacy Material 3.
+
+---
+
+## 5. Protokol Integritas Eksperimen & Performa Sistem
+
+Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh **integritas riset dan metodologi ilmiah tetap terjaga 100%**:
+
+1. **Fixed 100-Step Ground Truth:** Setiap sesi benchmarking tetap terkalibrasi ke standar 100 langkah fisik aktual.
+2. **Deterministic Offline Replay:** Penyimpanan sampel sensor mentah tetap berformat `SensorSample` murni (X, Y, Z, timestamp) sehingga algoritma dapat di-replay secara *offline* untuk pembuktian ilmiah.
+3. **Asynchronous Non-Blocking Pipeline:** Seluruh pemrosesan dataset besar berjalan di thread asinkron agar perangkat smartphone tidak mengalami lag atau *screen freeze*.
+4. **Privacy & Offline First:** Penyimpanan data bersifat lokal dan offline-first. Pengiriman telemetri ke PostHog Cloud hanya berjalan saat koneksi internet aktif tanpa menghambat antarmuka pengguna.
