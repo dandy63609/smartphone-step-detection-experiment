@@ -74,8 +74,8 @@ jobs:
             echo 'changelog<<EOF'
             printf '%s\n\n' "$CHANGELOG"
             echo '### 📱 Download APK (Android)'
-            echo "- **`step-detection-${TAG_NAME}-arm64-v8a.apk`** *(Recommended — untuk hampir semua HP Android modern 64-bit)*"
-            echo "- **`step-detection-${TAG_NAME}-armeabi-v7a.apk`** *(Untuk HP Android 32-bit lama)*"
+            echo "- **\`step-detection-${TAG_NAME}-arm64-v8a.apk\`** *(Recommended for modern 64-bit Android devices)*"
+            echo "- **\`step-detection-${TAG_NAME}-armeabi-v7a.apk\`** *(For legacy 32-bit Android devices)*"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
