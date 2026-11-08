@@ -49,67 +49,106 @@ assets/images/
 
 ---
 
-## 3. Revamp Layar Saat Ini: Active Run Screen (Semi-Experiment) `[STATUS: DONE - SPRINT 2 POLISH PENDING]`
+## 3. Cetak Biru Visual ASCII & Sistem Desain Baru (Zero-Scroll "Unified Stride Deck") `[STATUS: DONE - SPRINT 2 POLISH PENDING]`
 
-Layar saat ini (`ActiveRunScreen`) berfungsi ganda: sebagai pemutar lari aktif bagi pelari sekaligus instrumen eksperimen biomekanika bagi penguji/peneliti. Revamp dilakukan agar kedua kebutuhan ini menyatu secara harmonis tanpa saling mengganggu.
+Bagian ini memuat visualisasi tata letak ASCII terkini untuk **Layar Utama (`ActiveRunScreen`)**, hierarki bentuk/sudut lengkung (*shape & border system*), serta **Komparasi Tema Light/Dark**. Seluruh rancangan disusun bebas dari *AI slop*, mengadopsi 100% karakter produk premium dari **Referensi 1** dan **Referensi 2**, serta memadukan identitas sejati **Stradio (Strava + Audio)**.
+
+### 3.1 Visualisasi ASCII Terkini: Zero-Scroll "Unified Stride Deck"
+
+Desain ini telah divalidasi dan diterapkan di kode nyata:
+* **Branding Asli:** Mengganti avatar dummy "Mark C." dengan **Logo Resmi Stradio** + Status Pill dinamis.
+* **Slogan & Subtitle Kuat:** *"Stride to the Beat"* + *"Neon Stride · Adaptive Stride"* (bebas dari teks BPM redundan).
+* **Waveform Rhythm Core:** Menampilkan **Rhythm Core Emblem (`( ◎ )`)** non-button di tengah visualizer yang berdenyut reaktif mengikuti tempo & entakan kaki.
+* **Kontrol Terpusat (Zero-Ambiguity):** Seluruh aksi kendali lari (*Play/Pause* bulat Sonic Coral dan *Finish Run* stadium pill) berada strictly 100% di **Bottom Thumb Zone**.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ [● LIVE STRIDE]                        [ ⚗ Sensor Labs ]│
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│   ┌─────────────────────────────────────────────────┐   │
-│   │  AUDIO-STRIDE WAVEFORM             165 BPM      │   │
-│   │                                                 │   │
-│   │          ~~~~~~ ( ▶ PLAY ) ~~~~~~               │   │
-│   │                                                 │   │
-│   └─────────────────────────────────────────────────┘   │
-│                                                         │
-│   [ 165 BPM ]   [ Hand • Right ]   [ Algoritma: A1 ]    │
-│                                                         │
-│                         084                             │
-│                        STEPS                            │
-│           Detected: 84 / Target: 100 Steps              │
-│                                                         │
-│   ┌─────────────────────────────────────────────────┐   │
-│   │   158 AVG SPM   •   04:12 TIME   •   8.4 KM/H   │   │
-│   └─────────────────────────────────────────────────┘   │
-│                                                         │
-│   ┌─────────────────────────────────────────────────┐   │
-│   │  Neon Stride                                    │   │
-│   │  ( ⏸ PAUSE )           [    FINISH RUN    ]     │   │
-│   └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ [ STRADIO LOGO ]  [● PAUSED]          [ ☀/☾ ] [ ⚗ Labs ]    │
+├─────────────────────────────────────────────────────────────┤
+│ Stride to the Beat                                          │
+│ Neon Stride · Adaptive Stride                               │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │  AUDIO-STRIDE WAVEFORM                    118 BPM TARGET│ │
+│ │                                                         │ │
+│ │   || | |||| ||| ||||||| ( ◎ ) ||||||| ||| |||| | ||     │ │
+│ │   (Rhythm Core Emblem: Denyut ritme tempo & hentakan)   │ │
+│ │                                                         │ │
+│ │  Cadence Sync: 0 SPM                    ● Standby Preview│ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │  STRIDE GOAL                              0 / 100 (0%)  │ │
+│ │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━░░░░░  0%         │ │
+│ │                                                         │ │
+│ │        0                    0 SPM           00:00       │ │
+│ │      STEPS                 CADENCE          TIME        │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │   ╭─────────╮                                           │ │
+│ │   │ ▶ PLAY  │        [        FINISH RUN        ]        │ │
+│ │   ╰─────────╯                                           │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Rincian Komponen Revamp:
+### 3.2 Spesifikasi Bentuk: 100% Borderless & Corner Radius Hierarchy
 
-1. **Top Bar Minimalis:**
-   - Sisi kiri: *Live Status Badge* (titik hijau solid untuk lari aktif, titik kuning solid untuk standby/paused).
-   - Sisi kanan: Tombol *Sensor Labs* (ikon tabung reaksi) untuk membuka drawer diagnostik dan ekspor CSV.
-   - Bebas dari judul teks redundan agar layar terasa lapang.
+Stradio menolak penggunaan border garis abu-abu 1px kaku khas AI slop. Seluruh pemisahan bidang kartu dilakukan menggunakan **Tonal Contrast** dan **Diffused Ambient Shadow**.
 
-2. **Hero Waveform Card dengan Center Action Button:**
-   - Kartu visualizer berlatar belakang gelap gradien dengan border halus.
-   - Saat kondisi **Standby/Paused**: Menampilkan garis horizon tenang dan tombol **Play bulat Sonic Coral melayang di tengah visualizer** (mengadopsi Referensi 2).
-   - Saat kondisi **Running**: Menampilkan gelombang 3-lapis dinamis yang terhubung langsung dengan sinyal akselerometer 100 Hz. Tombol berpindah ke deck bawah sehingga visualizer bebas menampilkan grafik gerakan secara penuh.
+#### 1. Aturan Borderless & Elevasi Lembut
+* **Border:** `BorderSide.none` pada seluruh kartu dan modal.
+* **Separasi Bidang:** Diciptakan melalui kontras alas Warm Ivory (`#F7F6F2`) dengan permukaan kartu Pure White (`#FFFFFF`), dipertegas oleh bayangan difus 2-lapis:
+  ```dart
+  static const List<BoxShadow> cardShadow = [
+    BoxShadow(
+      color: Color(0x0A000000), // 4% black ambient
+      blurRadius: 24,
+      offset: Offset(0, 8),
+      spreadRadius: 0,
+    ),
+    BoxShadow(
+      color: Color(0x05000000), // 2% black contact
+      blurRadius: 6,
+      offset: Offset(0, 2),
+      spreadRadius: 0,
+    ),
+  ];
+  ```
 
-3. **Segmented Utility Capsule Bar:**
-   - Tiga kapsul kontrol horizontal yang rapi (mengadopsi Referensi 1):
-     1. *Target Tempo BPM Selector* (118 / 145 / 165 BPM).
-     2. *Phone Placement Selector* (Hand / Pocket).
-     3. *Active Algorithm Selector* (A1 Midpoint Raw / B1 Mean+SD).
+#### 2. Hierarki Sudut Lengkung (Deep Organic Squircle)
 
-4. **Digital Stride Readout:**
-   - Angka langkah berukuran ekstra besar (Sora 64–72px) dengan animasi transisi angka halus.
-   - Indikator pencapaian target ground truth: `Detected: X / Target: 100 Steps`.
+| Level | Token | Nilai | Elemen UI | Alasan Desain (Ref 1 & 2) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Level 1** | `StradioRadii.hero` | **28.0 px** | Waveform Deck, Modal Bottom Sheet, Cover Art | Memberikan siluet batu kerikil halus (*smooth pebble*) yang sangat modern dan ramah mata ala Ref 2. |
+| **Level 2** | `StradioRadii.squircle` | **20.0 px** | Stride Goal Deck, Quick Action Tiles | Bentuk squircle proporsional (mirip launchpad MPC audio) yang tactile dan nyaman saat dipandang. |
+| **Level 3** | `StradioRadii.card` | **16.0 px** | Panel diagnostik internal, kartu riwayat | Radius standar fungsional untuk kartu anak (*nested containers*). |
+| **Level 4** | `StradioRadii.pill` | **999.0 px** | Tombol CTA (Finish), Status Badge, Floating Nav | Bentuk kapsul penuh (*stadium*) untuk seluruh elemen yang bisa disentuh jempol, memberi kontras tegas terhadap kartu squircle. |
 
-5. **Secondary Performance Bar:**
-   - Tiga metrik pelari dalam satu kartu horizontal: Cadence (SPM), Durasi Berjalan (Menit:Detik), dan Estimasi Kecepatan (km/h).
+### 3.3 Komparasi Palet: Warm Organic Dual Theme
 
-6. **Bottom Control Deck:**
-   - Tombol bulat **Pause / Resume** berwarna Sonic Coral dengan efek glow lembut.
-   - Tombol **Finish Run** berbentuk pill penuh yang bersih, nyaman ditekan, dan dilengkapi overlay loading non-blocking agar tidak terjadi freeze saat komputasi data besar.
+```
+┌───────────────────────────────────────┬───────────────────────────────────────┐
+│ LIGHT THEME (Warm Ivory - Ref 1 & 2)  │ DARK THEME (Deep Obsidian - Night Run)│
+├───────────────────────────────────────┼───────────────────────────────────────┤
+│ • Canvas: Warm Ivory (`#F7F6F2`)      │ • Canvas: Deep Obsidian (`#121217`)   │
+│ • Surfaces: Pure White (`#FFFFFF`)    │ • Surfaces: Charcoal Card (`#1E1E26`) │
+│ • Typography: Midnight (`#191923`)    │ • Typography: Warm Ivory (`#F5F0E8`)  │
+│ • Secondary: Muted Slate (`#666680`)  │ • Secondary: Soft Silver (`#9E9EB2`)  │
+│ • Accent 1: Sonic Coral (`#FF765F`)   │ • Accent 1: Sonic Coral (`#FF765F`)   │
+│ • Accent 2: Rhythm Violet (`#8B72DE`) │ • Accent 2: Rhythm Violet (`#A995DB`) │
+│ • Elevation: Soft Warm Shadows        │ • Elevation: Tonal Surface Separation │
+│   (100% Borderless, tanpa garis 1px)  │   (Kontras lembut, tanpa glow norak)  │
+└───────────────────────────────────────┴───────────────────────────────────────┘
+```
+
+### 3.4 Pemetaan Token ke `lib/theme/stradio_theme.dart`
+
+1. **`StradioRadii`:** Menambahkan `hero = 28.0`, `squircle = 20.0`, dan `pill = 999.0`.
+2. **`StradioColors`:** Menambahkan token Dark Theme (`obsidianCanvas = Color(0xFF121217)`, `charcoalSurface = Color(0xFF1E1E26)`).
+3. **`StradioTheme.darkTheme`:** Mengimplementasikan tema gelap organik nyata alih-alih sekadar alias `lightTheme`.
+4. **`cardTheme`:** Mengunci `side: BorderSide.none` dan elevasi 0 dengan `StradioColors.cardShadow`.
 
 ---
 
@@ -192,119 +231,11 @@ Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh *
 
 ---
 
-## 7. Cetak Biru Visual ASCII & Sistem Desain Baru (Hasil Review UX Sally & Anti-Slop) `[STATUS: DONE]`
-
-Bagian ini memuat visualisasi tata letak ASCII baru untuk **Layar Utama (`ActiveRunScreen`)**, hierarki bentuk/sudut lengkung (*shape & border system*), serta **Komparasi Tema Light/Dark**. Seluruh rancangan disusun bebas dari *AI slop* dan mengadopsi 100% karakter produk premium dari **Referensi 1** dan **Referensi 2**.
-
-### 7.1 Visualisasi ASCII: Zero-Scroll "Unified Stride Deck"
-
-Desain ini mengatasi 4 cacat UX pada draf sebelumnya: mengeliminasi tombol ganda (*no dual play buttons*), menjamin **Zero-Scroll** (pas dalam 1 viewport ponsel saat berlari), membuang istilah kaku laboratorium (*"Physical Steps"* diganti *"Session Goal"*), serta menempatkan seluruh kontrol vital di **Thumb Zone** bawah.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ (👤) Mark C.  [● ACTIVE]              [ ☀/☾ ] [ ⚗ Labs ]    │
-├─────────────────────────────────────────────────────────────┤
-│ Find Your Stride                                            │
-│ Neon Stride · 165 BPM ⚡                                     │
-│                                                             │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │  AUDIO-STRIDE WAVEFORM                                  │ │
-│ │                                                         │ │
-│ │   || | |||| ||| ||||||| ||||||| ||| |||| | ||           │ │
-│ │   || | |||| ||| ||||||| ||||||| ||| |||| | ||           │ │
-│ │   (Equalizer bar vertikal berirama reaktif langkah)     │ │
-│ │                                                         │ │
-│ │  Cadence Sync: Optimal (162 SPM)        ● Live Reactive │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │  STRIDE GOAL                              84 / 100      │ │
-│ │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━░░░░░  84%        │ │
-│ │                                                         │ │
-│ │       084                   162             04:18       │ │
-│ │      STEPS                  SPM             TIME        │ │
-│ └─────────────────────────────────────────────────────────┘ │
-│                                                             │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │   ╭─────────╮                                           │ │
-│ │   │ ⏸ PAUSE │        [     FINISH WORKOUT     ]        │ │
-│ │   ╰─────────╯                                           │ │
-│ └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-### 7.2 Spesifikasi Bentuk: 100% Borderless & Corner Radius Hierarchy
-
-Berdasarkan analisis bedah visual terhadap **Referensi 1** dan **Referensi 2**, Stradio menolak penggunaan border garis abu-abu 1px kaku khas AI slop. Seluruh pemisahan bidang kartu dilakukan menggunakan **Tonal Contrast** dan **Diffused Ambient Shadow**.
-
-#### 1. Aturan Borderless & Elevasi Lembut
-* **Border:** `BorderSide.none` pada seluruh kartu dan modal.
-* **Separasi Bidang:** Diciptakan melalui kontras alas Warm Ivory (`#F7F6F2`) dengan permukaan kartu Pure White (`#FFFFFF`), dipertegas oleh bayangan difus 2-lapis:
-  ```dart
-  static const List<BoxShadow> cardShadow = [
-    BoxShadow(
-      color: Color(0x0A000000), // 4% black ambient
-      blurRadius: 24,
-      offset: Offset(0, 8),
-      spreadRadius: 0,
-    ),
-    BoxShadow(
-      color: Color(0x05000000), // 2% black contact
-      blurRadius: 6,
-      offset: Offset(0, 2),
-      spreadRadius: 0,
-    ),
-  ];
-  ```
-
-#### 2. Hierarki Sudut Lengkung (Deep Organic Squircle)
-
-| Level | Token | Nilai | Elemen UI | Alasan Desain (Ref 1 & 2) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Level 1** | `StradioRadii.hero` | **28.0 px** | Waveform Deck, Modal Bottom Sheet, Cover Art | Memberikan siluet batu kerikil halus (*smooth pebble*) yang sangat modern dan ramah mata ala Ref 2. |
-| **Level 2** | `StradioRadii.squircle` | **20.0 px** | Stride Goal Deck, Quick Action Tiles | Bentuk squircle proporsional (mirip launchpad MPC audio) yang tactile dan nyaman saat dipandang. |
-| **Level 3** | `StradioRadii.card` | **16.0 px** | Panel diagnostik internal, kartu riwayat | Radius standar fungsional untuk kartu anak (*nested containers*). |
-| **Level 4** | `StradioRadii.pill` | **999.0 px** | Tombol CTA (Finish), Status Badge, Floating Nav | Bentuk kapsul penuh (*stadium*) untuk seluruh elemen yang bisa disentuh jempol, memberi kontras tegas terhadap kartu squircle. |
-
----
-
-### 7.3 Komparasi Palet: Warm Organic Dual Theme
-
-```
-┌───────────────────────────────────────┬───────────────────────────────────────┐
-│ LIGHT THEME (Warm Ivory - Ref 1 & 2)  │ DARK THEME (Deep Obsidian - Night Run)│
-├───────────────────────────────────────┼───────────────────────────────────────┤
-│ • Canvas: Warm Ivory (`#F7F6F2`)      │ • Canvas: Deep Obsidian (`#121217`)   │
-│ • Surfaces: Pure White (`#FFFFFF`)    │ • Surfaces: Charcoal Card (`#1E1E26`) │
-│ • Typography: Midnight (`#191923`)    │ • Typography: Warm Ivory (`#F5F0E8`)  │
-│ • Secondary: Muted Slate (`#666680`)  │ • Secondary: Soft Silver (`#9E9EB2`)  │
-│ • Accent 1: Sonic Coral (`#FF765F`)   │ • Accent 1: Sonic Coral (`#FF765F`)   │
-│ • Accent 2: Rhythm Violet (`#8B72DE`) │ • Accent 2: Rhythm Violet (`#A995DB`) │
-│ • Elevation: Soft Warm Shadows        │ • Elevation: Tonal Surface Separation │
-│   (100% Borderless, tanpa garis 1px)  │   (Kontras lembut, tanpa glow norak)  │
-└───────────────────────────────────────┴───────────────────────────────────────┘
-```
-
----
-
-### 7.4 Pemetaan Token Baru ke `lib/theme/stradio_theme.dart`
-
-Untuk mendukung implementasi di kode Flutter, token berikut akan diperbarui:
-
-1. **`StradioRadii`:** Menambahkan `hero = 28.0`, `squircle = 20.0`, dan `pill = 999.0`.
-2. **`StradioColors`:** Menambahkan token Dark Theme (`obsidianCanvas = Color(0xFF121217)`, `charcoalSurface = Color(0xFF1E1E26)`).
-3. **`StradioTheme.darkTheme`:** Mengimplementasikan tema gelap organik nyata alih-alih sekadar alias `lightTheme`.
-4. **`cardTheme`:** Mengunci `side: BorderSide.none` dan elevasi 0 dengan `StradioColors.cardShadow`.
-
----
-
-## 8. Sprint Roadmap Baru: Robustness, Lifecycle, Persistence & Background Service
+## 7. Sprint Roadmap Baru: Robustness, Lifecycle, Persistence & Background Service `[STATUS: IN-PROGRESS]`
 
 Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand identity, persistensi data sesi aktif, serta persiapan pengujian fisik di kantong/layar mati.
 
-### 8.1 Ringkasan Status Sprint
+### 7.1 Ringkasan Status Sprint
 
 | Sprint | Fokus Utama | Target Deliverable | Status |
 | :--- | :--- | :--- | :--- |
@@ -315,7 +246,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 8.2 Rincian Sprint 1: Fix Bug Stream & State Lifecycle `[STATUS: DONE]`
+### 7.2 Rincian Sprint 1: Fix Bug Stream & State Lifecycle `[STATUS: DONE]`
 1. **Auto-Recovery Hardware Stream pada Tombol Play (`_togglePauseResume`):**
    - Menambahkan guard: jika `!_recordingService.isRecording`, otomatis memanggil `_startSensorStream()` sebelum mengaktifkan `_RunStreamState.running`.
    - Mengatasi kasus sensor stream mati saat drawer Sensor Labs dibuka atau saat berganti algoritma primer.
@@ -328,7 +259,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 8.3 Rincian Sprint 2: Visual Identity & UX Micro-Interactions `[STATUS: PLANNING]`
+### 7.3 Rincian Sprint 2: Visual Identity & UX Micro-Interactions `[STATUS: READY / NEXT]`
 1. **Header Stradio Brand Logo:**
    - Mengganti avatar dummy "MC" dan nama "Mark C." di `active_run_screen.dart` dengan logo resmi `assets/images/stradio-logo.png` (tinggi ~30–32dp) berdampingan dengan *Dynamic Status Pill* (`PAUSED` / `RUNNING`).
 2. **Brand Headline Evolution:**
@@ -340,7 +271,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 8.4 Rincian Sprint 3: Active Session Persistence (Pilihan A: Auto-Flush Cache) `[STATUS: PLANNING]`
+### 7.4 Rincian Sprint 3: Active Session Persistence (Pilihan A: Auto-Flush Cache) `[STATUS: PLANNING]`
 1. **Incremental Streaming Append (Pilihan A):**
    - Setiap batch 100 sampel (~1 detik) atau saat sesi dijeda, data mentah otomatis di-append ke file cache sementara di storage lokal (`.temp_active_run.json`).
 2. **Unfinished Session Detection (Crash Recovery):**
@@ -349,7 +280,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 8.5 Rincian Sprint 4: Background Service & Interactive Notification `[STATUS: PLANNING]`
+### 7.5 Rincian Sprint 4: Background Service & Interactive Notification `[STATUS: PLANNING]`
 1. **Android Foreground Service (`flutter_foreground_task`):**
    - Mencegah OS Android (Doze Mode & Battery Saver) mematikan sensor akselerometer saat layar terkunci (*screen sleep*) atau saat ponsel berada di dalam saku celana (Kondisi E5–E8).
 2. **Interactive Notification (Media/Workout Style):**
@@ -360,7 +291,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 8.6 Catatan Teknis Deployment APK (Pembaruan & Signature Key)
+### 7.6 Catatan Teknis Deployment APK (Pembaruan & Signature Key)
 * **Mengapa Muncul Pesan "App Not Installed / Package Conflicts" saat Update APK?**
   1. **Keystore Signature Mismatch:** APK debug menggunakan `debug.keystore` (unik per mesin/komputer), sedangkan APK release menggunakan release key. Android secara ketat melarang update jika signature key berbeda untuk melindungi aplikasi dari pembajakan.
   2. **Version Code Identik / Turun:** Jika `versionCode` di `pubspec.yaml` tidak dinaikkan (tetap `1.0.0+1`), installer Android bisa menolak pembaruan.
