@@ -130,17 +130,21 @@ class RecordingService {
   }
 
   Future<List<SensorSample>> stop() async {
-    await _userSubscription?.cancel();
+    final userSub = _userSubscription;
+    final sub = _subscription;
     _userSubscription = null;
-    await _subscription?.cancel();
     _subscription = null;
+    await userSub?.cancel();
+    await sub?.cancel();
     return samples;
   }
 
   Future<void> dispose() async {
-    await _userSubscription?.cancel();
+    final userSub = _userSubscription;
+    final sub = _subscription;
     _userSubscription = null;
-    await _subscription?.cancel();
     _subscription = null;
+    await userSub?.cancel();
+    await sub?.cancel();
   }
 }

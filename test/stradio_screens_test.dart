@@ -355,4 +355,91 @@ void main() {
       await tester.binding.setSurfaceSize(null);
     },
   );
+
+  testWidgets(
+    'Sprint 1: Sensor stream auto-recovers after Save & Finish, Discard, and changing algorithm in Sensor Labs without getting stuck',
+    (WidgetTester tester) async {
+      final store = InMemoryRecordingStore();
+      final recordingService = RecordingService(
+        source: (_) => Stream.value(
+          AccelerometerEvent(0.1, 9.8, 1.2, DateTime.now()),
+        ),
+        userSource: (_) => Stream.value(
+          UserAccelerometerEvent(0.0, 0.0, 0.0, DateTime.now()),
+        ),
+      );
+      final postHog = PostHogTelemetryService(
+        apiKey: '',
+        transport: (uri, payload) async => 200,
+      );
+
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          recordingService: recordingService,
+          postHogService: postHog,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Start run -> Pause
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('PAUSED'), findsOneWidget);
+
+      // 2. Open Sensor Labs -> switch algorithm to Mean+SD (B1) -> close sheet
+      await tester.tap(find.byKey(const Key('open_sensor_labs_button')));
+      await tester.pumpAndSettle();
+
+      final meanSdChip = find.text('Mean+SD (B1)');
+      await tester.ensureVisible(meanSdChip);
+      await tester.tap(meanSdChip);
+      await tester.pumpAndSettle();
+
+      final closeButton = find.byKey(const Key('sensor_labs_close_button'));
+      await tester.ensureVisible(closeButton);
+      await tester.tap(closeButton);
+      await tester.pumpAndSettle();
+
+      // 3. Resume run -> must transition to RUNNING smoothly and keep recording
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+      expect(recordingService.isRecording, isTrue);
+
+      // 4. Finish run -> Save & Finish
+      await tester.tap(find.byKey(const Key('finish_run_button')));
+      await tester.pumpAndSettle();
+      expect(find.text('Save & Finish Workout'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('save_finish_workout_button')));
+      await tester.pumpAndSettle();
+
+      // Back on ActiveRunScreen: trial count incremented, in Standby/Paused, ready to run again
+      expect(find.text('PAUSED'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+      expect(recordingService.isRecording, isTrue);
+
+      // 5. Finish run -> Discard (Back button)
+      await tester.tap(find.byKey(const Key('finish_run_button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('summary_back_button')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('summary_back_button')));
+      await tester.pumpAndSettle();
+
+      // Back on ActiveRunScreen: must auto-reconnect stream and resume without freeze
+      expect(find.text('PAUSED'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+      expect(recordingService.isRecording, isTrue);
+    },
+  );
 }

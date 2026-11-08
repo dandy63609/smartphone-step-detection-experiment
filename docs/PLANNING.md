@@ -5,7 +5,7 @@
 
 ---
 
-## 1. Visi Produk & Filosofi Desain
+## 1. Visi Produk & Filosofi Desain `[STATUS: DONE]`
 
 Stradio adalah aplikasi kebugaran generasi baru yang menyelaraskan setiap langkah lari pengguna dengan ritme musik adaptif. Pendekatan desain Stradio menolak tampilan eksperimen yang kaku maupun *AI visual slop*, melainkan mengadopsi standar desain produk kelas dunia (*crafted by a designer*) dengan kontras tinggi, navigasi ergonomis untuk jempol saat bergerak, serta hierarki visual yang bernapas (*spacious and focused*).
 
@@ -25,7 +25,7 @@ Stradio adalah aplikasi kebugaran generasi baru yang menyelaraskan setiap langka
 
 ---
 
-## 2. Acuan Desain Resmi (Visual References)
+## 2. Acuan Desain Resmi (Visual References) `[STATUS: DONE]`
 
 Arsitektur UI Stradio mengacu pada dua referensi visual utama yang disimpan di repositori:
 
@@ -49,7 +49,7 @@ assets/images/
 
 ---
 
-## 3. Revamp Layar Saat Ini: Active Run Screen (Semi-Experiment)
+## 3. Revamp Layar Saat Ini: Active Run Screen (Semi-Experiment) `[STATUS: DONE - SPRINT 2 POLISH PENDING]`
 
 Layar saat ini (`ActiveRunScreen`) berfungsi ganda: sebagai pemutar lari aktif bagi pelari sekaligus instrumen eksperimen biomekanika bagi penguji/peneliti. Revamp dilakukan agar kedua kebutuhan ini menyatu secara harmonis tanpa saling mengganggu.
 
@@ -113,7 +113,7 @@ Layar saat ini (`ActiveRunScreen`) berfungsi ganda: sebagai pemutar lari aktif b
 
 ---
 
-## 4. Rencana Navigasi & Layar Masa Depan (MVP Roadmap)
+## 4. Rencana Navigasi & Layar Masa Depan (MVP Roadmap) `[STATUS: PLANNING]`
 
 Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasikan, aplikasi akan dibungkus dengan **Root Shell Navigation** yang menggunakan bilah navigasi melayang (*Floating Island Bottom Navigation* sesuai Referensi 2) dengan struktur **5-Tab Gold Standard**:
 
@@ -164,24 +164,24 @@ Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasi
 
 ---
 
-## 5. Roadmap Eksekusi (6 Milestone)
+## 5. Roadmap Eksekusi (6 Milestone) `[STATUS: PARTIALLY DONE (M1-M3 SELESAI)]`
 
 1. **Milestone 1 (SELESAI - Commit `9153502`):** Revamp UI `ActiveRunScreen` (`lib/screens/stradio/active_run_screen.dart`).
    - Hero Waveform Card dengan tombol Play melayang di tengah saat standby, Segmented Utility Pills (BPM, Placement, Algorithm), angka langkah Sora 68px, target 100 langkah fisik, dan secondary metrics card.
-2. **Milestone 2 (Berikutnya):** Revamp UI `PostRunSummaryScreen` (`lib/screens/stradio/post_run_summary_screen.dart`).
-   - Header pencapaian ritmis, Stradio Signature Circular Rhythm Visualizer, matriks statistik latihan (Total Langkah out of 100, Durasi, SPM, Speed, Jarak), grafik konsistensi ritme langkah, mini Scoreboard akurasi 4 algoritma (A1–B2), serta tombol aksi "Save & Finish Workout" non-blocking.
-3. **Milestone 3:** Revamp UI `SensorLabsSheet` (`lib/screens/stradio/sensor_labs_sheet.dart`).
-   - Panel diagnostik biomekanika & instrumen laboratorium eksperimen mengadopsi estetika kartu gelap modern Referensi 1 & 2: Toggle Developer Mode Live Overlay, kartu diagnostik kesehatan sensor (100 Hz latency & zero dropped samples), kalibrasi Target Ground Truth 100 Langkah, pemilih algoritma primer, ekspor dataset CSV lengkap, dan reset data sampel.
-4. **Milestone 4:** `RootNavigationShell` & `HomeScreen`.
+2. **Milestone 2 (SELESAI - Commit `7da690f`):** Revamp UI `PostRunSummaryScreen` (`lib/screens/stradio/post_run_summary_screen.dart`).
+   - Header pencapaian ritmis `SESSION HIGHLIGHTS`, Stradio Signature Circular Rhythm Visualizer, matriks statistik latihan (Total Langkah out of 100, Durasi, SPM, Speed, Jarak) dalam 3 kolom horizontal deck rapi, grafik konsistensi ritme langkah, mini Scoreboard akurasi 4 algoritma (A1–B2), serta tombol aksi "Save & Finish Workout" non-blocking.
+3. **Milestone 3 (SELESAI - Commit `7da690f`):** Revamp UI `SensorLabsSheet` (`lib/screens/stradio/sensor_labs_sheet.dart`).
+   - Panel diagnostik biomekanika & instrumen laboratorium eksperimen mengadopsi estetika kartu gelap modern Referensi 1 & 2: Toggle Developer Mode Live Overlay, kartu diagnostik kesehatan sensor (100 Hz latency & zero dropped samples), kalibrasi Target Ground Truth 100 Langkah, pemilih algoritma primer berpasangan 3x2, ekspor dataset CSV lengkap, dan reset data sampel.
+4. **Milestone 4 (PLANNING):** `RootNavigationShell` & `HomeScreen`.
    - Bilah navigasi 5-tab melayang (*Floating Island Bottom Navigation*: Home, Library, **( RUN ) center elevated**, Activity, Settings) dan Dashboard Home pelari dengan sapaan asimetris modern (*"Find Your Rhythm"*) & Quick Actions.
-5. **Milestone 5:** `LibraryScreen`.
+5. **Milestone 5 (PLANNING):** `LibraryScreen`.
    - Katalog soundscapes reaktif (*Neon Stride 165*, *Tempo Jog 145*, *Lo-Fi Pace 118*, *Cyber Cadence 180*) mengadopsi layout kartu dari Referensi 1 dengan preview beat dan filter chips tempo.
-6. **Milestone 6 (Terakhir):** `ActivityScreen` & `SettingsScreen`.
+6. **Milestone 6 (PLANNING):** `ActivityScreen` & `SettingsScreen`.
    - Riwayat latihan lengkap, analisis target 100 langkah fisik & akurasi error antar-kondisi (E1–E8), serta panel terpadu Settings dan data retention.
 
 ---
 
-## 6. Protokol Integritas Eksperimen & Performa Sistem
+## 6. Protokol Integritas Eksperimen & Performa Sistem `[STATUS: DONE - 24/24 TESTS PASSED]`
 
 Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh **integritas riset dan metodologi ilmiah tetap terjaga 100%**:
 
@@ -192,7 +192,7 @@ Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh *
 
 ---
 
-## 7. Cetak Biru Visual ASCII & Sistem Desain Baru (Hasil Review UX Sally & Anti-Slop)
+## 7. Cetak Biru Visual ASCII & Sistem Desain Baru (Hasil Review UX Sally & Anti-Slop) `[STATUS: DONE]`
 
 Bagian ini memuat visualisasi tata letak ASCII baru untuk **Layar Utama (`ActiveRunScreen`)**, hierarki bentuk/sudut lengkung (*shape & border system*), serta **Komparasi Tema Light/Dark**. Seluruh rancangan disusun bebas dari *AI slop* dan mengadopsi 100% karakter produk premium dari **Referensi 1** dan **Referensi 2**.
 
@@ -297,4 +297,75 @@ Untuk mendukung implementasi di kode Flutter, token berikut akan diperbarui:
 2. **`StradioColors`:** Menambahkan token Dark Theme (`obsidianCanvas = Color(0xFF121217)`, `charcoalSurface = Color(0xFF1E1E26)`).
 3. **`StradioTheme.darkTheme`:** Mengimplementasikan tema gelap organik nyata alih-alih sekadar alias `lightTheme`.
 4. **`cardTheme`:** Mengunci `side: BorderSide.none` dan elevasi 0 dengan `StradioColors.cardShadow`.
+
+---
+
+## 8. Sprint Roadmap Baru: Robustness, Lifecycle, Persistence & Background Service
+
+Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand identity, persistensi data sesi aktif, serta persiapan pengujian fisik di kantong/layar mati.
+
+### 8.1 Ringkasan Status Sprint
+
+| Sprint | Fokus Utama | Target Deliverable | Status |
+| :--- | :--- | :--- | :--- |
+| **Sprint 1** | **Stream & Lifecycle Bug Fixes** | Auto-recovery sensor stream, restart session mulus setelah Finish, eliminasi false sensorError | `DONE` |
+| **Sprint 2** | **Visual Identity & Polish** | Logo Stradio header, headline *"Stride to the Beat"*, 3-kolom Sensor Labs, button spinner | `READY / NEXT` |
+| **Sprint 3** | **Active Session Persistence** | Pilihan A: Incremental auto-flush buffer ke cache lokal (`.temp_run.json`), crash recovery dialog | `PLANNING` |
+| **Sprint 4** | **Background Service & Lockscreen Control** | Android Foreground Service (`flutter_foreground_task`), lockscreen interactive notification | `PLANNING` |
+
+---
+
+### 8.2 Rincian Sprint 1: Fix Bug Stream & State Lifecycle `[STATUS: DONE]`
+1. **Auto-Recovery Hardware Stream pada Tombol Play (`_togglePauseResume`):**
+   - Menambahkan guard: jika `!_recordingService.isRecording`, otomatis memanggil `_startSensorStream()` sebelum mengaktifkan `_RunStreamState.running`.
+   - Mengatasi kasus sensor stream mati saat drawer Sensor Labs dibuka atau saat berganti algoritma primer.
+2. **Session Reset Mulus Setelah Kembali dari Summary Screen:**
+   - Ketika kembali dari `PostRunSummaryScreen` (baik melalui "Save & Finish" maupun "Back/Discard"), pastikan state tidak stuck:
+     - Jika disimpan (`savedAndFinished == true`): Buat `recordingId` baru (misal `REC_..._002`), reset seluruh detektor, dan re-subscribe sensor stream ke status Standby/Paused segar.
+     - Jika dibatalkan (`savedAndFinished == false`): Re-subscribe kembali sensor stream agar user bisa melanjutkan atau menekan play tanpa freeze.
+3. **Penghapusan False `sensorError` Timeout:**
+   - Menghilangkan abort kaku pada `isAccelerometerAvailable` saat ponsel diletakkan diam di meja, menggantikannya dengan lazy resilient connection.
+
+---
+
+### 8.3 Rincian Sprint 2: Visual Identity & UX Micro-Interactions `[STATUS: PLANNING]`
+1. **Header Stradio Brand Logo:**
+   - Mengganti avatar dummy "MC" dan nama "Mark C." di `active_run_screen.dart` dengan logo resmi `assets/images/stradio-logo.png` (tinggi ~30–32dp) berdampingan dengan *Dynamic Status Pill* (`PAUSED` / `RUNNING`).
+2. **Brand Headline Evolution:**
+   - Mengganti slogan generik *"Find Your Stride"* menjadi *"Stride to the Beat"* (menggambarkan konsep sejati Stradio: Strava + Audio).
+3. **Sensor Labs 3-Kolom Sejajar:**
+   - Mengubah layout `Wrap` 2+1 pada `SensorManager Active (100 Hz)` di `sensor_labs_sheet.dart` menjadi `Row` 3 kolom berimbang (`TIMESTAMP`, `SAMPLE DROPS`, `BUFFERED SAMPLES`).
+4. **Micro-Interaction Loading pada Tombol Save & Finish:**
+   - Mengganti teks panjang *"Saving Workout & Telemetry..."* dengan spinner `CircularProgressIndicator` putih berukuran 22x22 tepat di tengah tombol.
+
+---
+
+### 8.4 Rincian Sprint 3: Active Session Persistence (Pilihan A: Auto-Flush Cache) `[STATUS: PLANNING]`
+1. **Incremental Streaming Append (Pilihan A):**
+   - Setiap batch 100 sampel (~1 detik) atau saat sesi dijeda, data mentah otomatis di-append ke file cache sementara di storage lokal (`.temp_active_run.json`).
+2. **Unfinished Session Detection (Crash Recovery):**
+   - Saat aplikasi diluncurkan, periksa keberadaan file `.temp_active_run.json`.
+   - Jika ditemukan sesi yang belum di-finish (misal karena baterai habis atau app tertutup mendadak), tampilkan dialog: *"Sesi lari sebelumnya terdeteksi: REC_... (X langkah). Simpan atau Buang?"*.
+
+---
+
+### 8.5 Rincian Sprint 4: Background Service & Interactive Notification `[STATUS: PLANNING]`
+1. **Android Foreground Service (`flutter_foreground_task`):**
+   - Mencegah OS Android (Doze Mode & Battery Saver) mematikan sensor akselerometer saat layar terkunci (*screen sleep*) atau saat ponsel berada di dalam saku celana (Kondisi E5–E8).
+2. **Interactive Notification (Media/Workout Style):**
+   - Menampilkan notifikasi persisten di lock screen:
+     - Header: `Stradio · Running (118 BPM)`
+     - Body: `Steps: 42 / 100 (A1 Midpoint) · 01:23`
+     - Action Buttons: `[ ⏸ Pause / ▶ Resume ]` dan `[ 🏁 Finish ]` yang dapat diklik langsung tanpa membuka kunci ponsel.
+
+---
+
+### 8.6 Catatan Teknis Deployment APK (Pembaruan & Signature Key)
+* **Mengapa Muncul Pesan "App Not Installed / Package Conflicts" saat Update APK?**
+  1. **Keystore Signature Mismatch:** APK debug menggunakan `debug.keystore` (unik per mesin/komputer), sedangkan APK release menggunakan release key. Android secara ketat melarang update jika signature key berbeda untuk melindungi aplikasi dari pembajakan.
+  2. **Version Code Identik / Turun:** Jika `versionCode` di `pubspec.yaml` tidak dinaikkan (tetap `1.0.0+1`), installer Android bisa menolak pembaruan.
+* **Standar Penanganan:**
+  * Selama tahap pengembangan cepat, hapus (*uninstall*) APK lama sebelum menginstal APK baru.
+  * Untuk pembaruan tanpa uninstall di kemudian hari: gunakan build mode konsisten dan naikkan build number di `pubspec.yaml` (`1.0.0+2`, `1.0.0+3`, dst).
+
 

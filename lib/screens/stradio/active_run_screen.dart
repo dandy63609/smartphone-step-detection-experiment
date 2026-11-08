@@ -170,15 +170,16 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         _sensorErrorText =
             'Accelerometer stream did not respond within 1.2s. Check device sensor permissions or use Simulate Stride (+1) to test on an emulator.';
       });
+      await _startSensorStream(preserveErrorState: true);
       return;
     }
 
-    _startSensorStream();
+    await _startSensorStream();
   }
 
-  void _startSensorStream() {
+  Future<void> _startSensorStream({bool preserveErrorState = false}) async {
     if (_recordingService.isRecording) {
-      unawaited(_recordingService.stop());
+      await _recordingService.stop();
     }
 
     try {
@@ -196,8 +197,10 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       );
 
       setState(() {
-        _streamState = _RunStreamState.paused;
-        _sensorErrorText = null;
+        if (!preserveErrorState) {
+          _streamState = _RunStreamState.paused;
+          _sensorErrorText = null;
+        }
       });
     } on Object catch (error) {
       setState(() {
@@ -331,7 +334,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     setState(() {});
   }
 
-  void _togglePauseResume() {
+  Future<void> _togglePauseResume() async {
     if (_streamState == _RunStreamState.running) {
       setState(() {
         _streamState = _RunStreamState.paused;
@@ -345,10 +348,14 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         ),
       );
     } else {
+      if (!_recordingService.isRecording) {
+        await _startSensorStream();
+      }
       final isFirstStart = !_hasStartedRun;
       _hasStartedRun = true;
       setState(() {
         _streamState = _RunStreamState.running;
+        _sensorErrorText = null;
       });
       _startElapsedTicker();
       if (isFirstStart) {
@@ -485,6 +492,9 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       setState(() {
         _streamState = _RunStreamState.paused;
       });
+      if (!_recordingService.isRecording) {
+        await _startSensorStream();
+      }
     }
   }
 
@@ -527,6 +537,12 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         },
       ),
     );
+
+    if (!mounted) return;
+    if (!_recordingService.isRecording &&
+        _streamState != _RunStreamState.sensorError) {
+      await _startSensorStream();
+    }
   }
 
   void _updateTargetBpm(int bpm) {
