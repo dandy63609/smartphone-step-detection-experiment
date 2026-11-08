@@ -245,24 +245,23 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: StradioColors.surfaceDark,
+        backgroundColor: StradioColors.whiteSurface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(StradioRadii.card),
-          side: const BorderSide(color: StradioColors.borderDark),
         ),
         title: Text(
           'Hapus Semua Sampel?',
           style: StradioTypography.soraHeading(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: StradioColors.warmIvory,
+            color: StradioColors.midnight,
           ),
         ),
         content: Text(
           'Tindakan ini akan menghapus semua file rekaman sampel sensor yang tersimpan secara lokal dan mengulang dari awal.',
           style: StradioTypography.interBody(
             fontSize: 13,
-            color: StradioColors.mutedIvory,
+            color: StradioColors.secondaryNeutral,
           ),
         ),
         actions: [
@@ -275,7 +274,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
               'Batal',
               style: StradioTypography.interLabel(
                 fontSize: 14,
-                color: StradioColors.mutedIvory,
+                color: StradioColors.secondaryNeutral,
               ),
             ),
           ),
@@ -284,7 +283,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: StradioColors.sonicCoral,
-              foregroundColor: StradioColors.midnight,
+              foregroundColor: Colors.white,
               shape: const StadiumBorder(),
             ),
             child: Text(
@@ -292,7 +291,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
               style: StradioTypography.soraHeading(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: StradioColors.midnight,
+                color: Colors.white,
               ),
             ),
           ),
@@ -349,12 +348,9 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
 
     return Container(
       decoration: const BoxDecoration(
-        color: StradioColors.surfaceDark,
+        color: StradioColors.whiteSurface,
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(StradioRadii.hero),
-        ),
-        border: Border(
-          top: BorderSide(color: StradioColors.borderDark, width: 1.2),
         ),
       ),
       child: SafeArea(
@@ -372,7 +368,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: StradioColors.borderDark,
+                      color: StradioColors.secondaryNeutral.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -394,6 +390,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                         style: StradioTypography.soraHeading(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
+                          color: StradioColors.midnight,
                         ),
                       ),
                     ),
@@ -406,13 +403,11 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                         tooltip: 'Close Sensor Labs',
                         style: IconButton.styleFrom(
                           backgroundColor: StradioColors.surfaceSubtle,
-                          shape: const CircleBorder(
-                            side: BorderSide(color: StradioColors.borderDark),
-                          ),
+                          shape: const CircleBorder(),
                         ),
                         icon: const Icon(
                           Icons.close,
-                          color: StradioColors.warmIvory,
+                          color: StradioColors.midnight,
                           size: 20,
                         ),
                       ),
@@ -427,11 +422,6 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   decoration: BoxDecoration(
                     color: StradioColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(StradioRadii.card),
-                    border: Border.all(
-                      color: _settings.developerOverlayEnabled
-                          ? StradioColors.sonicCoral
-                          : StradioColors.borderDark,
-                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,7 +442,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                               'Displays live 100Hz X/Y/Z telemetry and 4-algorithm step comparison directly over the active run screen',
                               style: StradioTypography.interBody(
                                 fontSize: 13,
-                                color: StradioColors.mutedIvory,
+                                color: StradioColors.secondaryNeutral,
                               ),
                             ),
                           ],
@@ -490,7 +480,6 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                       decoration: BoxDecoration(
                         color: StradioColors.surfaceSubtle,
                         borderRadius: BorderRadius.circular(StradioRadii.card),
-                        border: Border.all(color: StradioColors.borderDark),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,7 +549,6 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   decoration: BoxDecoration(
                     color: StradioColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(StradioRadii.card),
-                    border: Border.all(color: StradioColors.borderDark),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -570,6 +558,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                         style: StradioTypography.soraHeading(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
+                          color: StradioColors.midnight,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -577,7 +566,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                         'Physical step count benchmark used to compute algorithm margin of error.',
                         style: StradioTypography.interBody(
                           fontSize: 12,
-                          color: StradioColors.mutedIvory,
+                          color: StradioColors.secondaryNeutral,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -697,7 +686,10 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                           onPressed: _applyTextSettings,
                           style: OutlinedButton.styleFrom(
                             shape: const StadiumBorder(),
-                            side: const BorderSide(color: StradioColors.borderDark),
+                            backgroundColor: StradioColors.whiteSurface,
+                            side: BorderSide.none,
+                            elevation: 1,
+                            shadowColor: Colors.black.withValues(alpha: 0.06),
                             foregroundColor: StradioColors.rhythmViolet,
                           ),
                           icon: const Icon(Icons.check_circle_outline, size: 18),
@@ -715,7 +707,6 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   decoration: BoxDecoration(
                     color: StradioColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(StradioRadii.card),
-                    border: Border.all(color: StradioColors.borderDark),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -728,6 +719,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                               style: StradioTypography.soraHeading(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
+                                color: StradioColors.midnight,
                               ),
                             ),
                           ),
@@ -764,8 +756,9 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                             onPressed: _applyPostHogKey,
                             style: OutlinedButton.styleFrom(
                               shape: const StadiumBorder(),
-                              side: const BorderSide(color: StradioColors.borderDark),
-                              foregroundColor: StradioColors.warmIvory,
+                              side: BorderSide.none,
+                              backgroundColor: StradioColors.whiteSurface,
+                              foregroundColor: StradioColors.midnight,
                             ),
                             child: const Text('Sync'),
                           ),
@@ -787,17 +780,12 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                           ? StradioColors.statusError.withValues(alpha: 0.14)
                           : StradioColors.rhythmViolet.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(StradioRadii.control),
-                      border: Border.all(
-                        color: _statusIsError
-                            ? StradioColors.statusError
-                            : StradioColors.rhythmViolet,
-                      ),
                     ),
                     child: Text(
                       _statusMessage!,
                       style: StradioTypography.interBody(
                         fontSize: 13,
-                        color: StradioColors.warmIvory,
+                        color: StradioColors.midnight,
                       ),
                     ),
                   ),
@@ -810,7 +798,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   onPressed: (_exportingCsv || _clearingSamples) ? null : _exportFullDataset,
                   style: FilledButton.styleFrom(
                     backgroundColor: StradioColors.sonicCoral,
-                    foregroundColor: StradioColors.midnight,
+                    foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(52),
                     shape: const StadiumBorder(),
                   ),
@@ -820,7 +808,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: StradioColors.midnight,
+                            color: Colors.white,
                           ),
                         )
                       : const Icon(Icons.download_rounded),
@@ -831,7 +819,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                     style: StradioTypography.soraHeading(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: StradioColors.midnight,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -859,9 +847,10 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                     shape: const StadiumBorder(),
-                    side: BorderSide(
-                      color: StradioColors.sonicCoral.withValues(alpha: 0.5),
-                    ),
+                    backgroundColor: StradioColors.whiteSurface,
+                    side: BorderSide.none,
+                    elevation: 1,
+                    shadowColor: Colors.black.withValues(alpha: 0.06),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -871,8 +860,11 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                     shape: const StadiumBorder(),
-                    side: const BorderSide(color: StradioColors.borderDark),
-                    foregroundColor: StradioColors.warmIvory,
+                    backgroundColor: StradioColors.whiteSurface,
+                    side: BorderSide.none,
+                    elevation: 1,
+                    shadowColor: Colors.black.withValues(alpha: 0.06),
+                    foregroundColor: StradioColors.midnight,
                   ),
                   icon: const Icon(Icons.grid_view_rounded, size: 18),
                   label: const Text('Open Legacy Experiment Screen'),
@@ -897,9 +889,9 @@ class _DiagnosticStatItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: StradioColors.surfaceDark,
+        color: StradioColors.whiteSurface,
         borderRadius: BorderRadius.circular(StradioRadii.control),
-        border: Border.all(color: StradioColors.borderDark),
+        boxShadow: StradioColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -909,7 +901,7 @@ class _DiagnosticStatItem extends StatelessWidget {
             label,
             style: StradioTypography.interLabel(
               fontSize: 10,
-              color: StradioColors.mutedIvory,
+              color: StradioColors.secondaryNeutral,
             ),
           ),
           const SizedBox(height: 3),
@@ -918,7 +910,7 @@ class _DiagnosticStatItem extends StatelessWidget {
             style: StradioTypography.interLabel(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: StradioColors.warmIvory,
+              color: StradioColors.midnight,
               letterSpacing: 0.1,
             ),
           ),
@@ -954,15 +946,10 @@ class _ProtocolChip extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected
-                ? StradioColors.sonicCoral.withValues(alpha: 0.18)
-                : StradioColors.midnight,
+                ? StradioColors.sonicCoral.withValues(alpha: 0.15)
+                : StradioColors.whiteSurface,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected
-                  ? StradioColors.sonicCoral
-                  : StradioColors.borderDark,
-              width: selected ? 1.5 : 1.0,
-            ),
+            boxShadow: selected ? null : StradioColors.cardShadow,
           ),
           child: Text(
             label,
@@ -971,7 +958,7 @@ class _ProtocolChip extends StatelessWidget {
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               color: selected
                   ? StradioColors.sonicCoral
-                  : StradioColors.warmIvory,
+                  : StradioColors.midnight,
               letterSpacing: 0.2,
             ),
           ),

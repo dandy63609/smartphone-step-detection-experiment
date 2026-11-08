@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Official STRADIO Brand Identity & Design System Tokens.
 ///
-/// Philosophy: "Stride + Audio: Movement becomes music"
+/// Philosophy: "Strava + Audio: Movement becomes music"
 /// Dial: ENERGY 3 / RHYTHM 2 / MOTION 2
 ///
 /// One-line design rationale (R-31):
@@ -17,40 +17,62 @@ import 'package:flutter/material.dart';
 class StradioColors {
   const StradioColors._();
 
-  /// Deep Midnight background (#191923).
+  /// Warm Ivory / Off-white primary canvas background (#F7F6F2) per Reference 1 & 2.
+  static const Color ivoryCanvas = Color(0xFFF7F6F2);
+
+  /// Pure White for elevated cards and floating surfaces (#FFFFFF).
+  static const Color whiteSurface = Color(0xFFFFFFFF);
+
+  /// Subtle tint for nested secondary containers (#F0EFEA).
+  static const Color surfaceSubtle = Color(0xFFF0EFEA);
+
+  /// Midnight Dark Neutral for high-contrast primary typography and icons (#191923).
   static const Color midnight = Color(0xFF191923);
 
-  /// Warm Ivory primary typography and readouts (#F5F0E8) - 14.1:1 contrast on Midnight.
-  static const Color warmIvory = Color(0xFFF5F0E8);
+  /// Secondary neutral for labels, subheaders, and helper copy (#666680).
+  static const Color secondaryNeutral = Color(0xFF666680);
 
-  /// Secondary Warm Ivory for labels (#CBC5BA) - 8.9:1 contrast on Midnight, 6.4:1 on SurfaceDark.
-  static const Color mutedIvory = Color(0xFFCBC5BA);
+  /// Muted neutral for tertiary readouts and disabled states (#9E9EB2).
+  static const Color mutedNeutral = Color(0xFF9E9EB2);
 
   /// Vibrant Accent / Primary CTA: Sonic Coral (#FF765F).
   static const Color sonicCoral = Color(0xFFFF765F);
 
-  /// Rhythm & Tempo Accent: Rhythm Violet (#A995DB).
-  static const Color rhythmViolet = Color(0xFFA995DB);
+  /// Rhythm & Tempo Accent: Rhythm Violet (#8B72DE).
+  static const Color rhythmViolet = Color(0xFF8B72DE);
 
-  /// Elevated Dark Surface (#2A2B3D).
-  static const Color surfaceDark = Color(0xFF2A2B3D);
+  /// Solid Live Status Green (#2EBF6F) - solid indicator when recording is active.
+  static const Color statusLive = Color(0xFF2EBF6F);
 
-  /// Subtle Elevated Surface for nested controls (#212232).
-  static const Color surfaceSubtle = Color(0xFF212232);
+  /// Paused / Standby Status Amber (#F59E0B).
+  static const Color statusPaused = Color(0xFFF59E0B);
 
-  /// Structural Dark Border (#46506E).
-  static const Color borderDark = Color(0xFF46506E);
+  /// Error / Alert Red (#EF4444).
+  static const Color statusError = Color(0xFFEF4444);
 
-  /// Solid Live Status Green (#3DDC84) - solid indicator when recording is active (R-19).
-  static const Color statusLive = Color(0xFF3DDC84);
+  /// Legacy dark colors preserved for backward compatibility
+  static const Color warmIvory = midnight;
+  static const Color mutedIvory = secondaryNeutral;
+  static const Color surfaceDark = whiteSurface;
+  static const Color borderDark = Colors.transparent;
 
-  /// Paused / Standby Status Amber (#FFB74D).
-  static const Color statusPaused = Color(0xFFFFB74D);
+  /// Soft elevation shadow for borderless cards (eliminates AI-slop hairline borders).
+  static const List<BoxShadow> cardShadow = [
+    BoxShadow(
+      color: Color(0x0A000000), // 4% black
+      blurRadius: 16,
+      offset: Offset(0, 4),
+      spreadRadius: 0,
+    ),
+    BoxShadow(
+      color: Color(0x06000000), // 2.5% black
+      blurRadius: 4,
+      offset: Offset(0, 1),
+      spreadRadius: 0,
+    ),
+  ];
 
-  /// Error / Alert Coral Red (#FF8A80).
-  static const Color statusError = Color(0xFFFF8A80);
-
-  /// Hero Linear Gradient from Sonic Coral (#FF765F) to Rhythm Violet (#A995DB).
+  /// Hero Linear Gradient from Sonic Coral (#FF765F) to Rhythm Violet (#8B72DE).
   static const LinearGradient heroGradient = LinearGradient(
     colors: [sonicCoral, rhythmViolet],
     begin: Alignment.topLeft,
@@ -172,53 +194,55 @@ class StradioTypography {
 class StradioTheme {
   const StradioTheme._();
 
-  static ThemeData get darkTheme {
-    const colorScheme = ColorScheme.dark(
+  /// Borderless Light Theme (Default)
+  static ThemeData get lightTheme {
+    const colorScheme = ColorScheme.light(
       primary: StradioColors.sonicCoral,
-      onPrimary: StradioColors.midnight,
+      onPrimary: Colors.white,
       secondary: StradioColors.rhythmViolet,
-      onSecondary: StradioColors.midnight,
-      surface: StradioColors.surfaceDark,
-      onSurface: StradioColors.warmIvory,
+      onSecondary: Colors.white,
+      surface: StradioColors.whiteSurface,
+      onSurface: StradioColors.midnight,
       error: StradioColors.statusError,
-      onError: StradioColors.midnight,
-      outline: StradioColors.borderDark,
+      onError: Colors.white,
+      outline: Colors.transparent,
     );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: StradioColors.midnight,
-      canvasColor: StradioColors.midnight,
-      dividerColor: StradioColors.borderDark,
-      focusColor: StradioColors.sonicCoral.withValues(alpha: 0.28),
-      hoverColor: StradioColors.rhythmViolet.withValues(alpha: 0.14),
-      splashColor: StradioColors.sonicCoral.withValues(alpha: 0.2),
+      scaffoldBackgroundColor: StradioColors.ivoryCanvas,
+      canvasColor: StradioColors.ivoryCanvas,
+      dividerColor: Colors.transparent,
+      focusColor: StradioColors.sonicCoral.withValues(alpha: 0.18),
+      hoverColor: StradioColors.rhythmViolet.withValues(alpha: 0.08),
+      splashColor: StradioColors.sonicCoral.withValues(alpha: 0.12),
       appBarTheme: AppBarTheme(
-        backgroundColor: StradioColors.midnight,
-        foregroundColor: StradioColors.warmIvory,
+        backgroundColor: StradioColors.ivoryCanvas,
+        foregroundColor: StradioColors.midnight,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: StradioTypography.soraHeading(
           fontSize: 18,
           fontWeight: FontWeight.w700,
+          color: StradioColors.midnight,
           letterSpacing: 1.8,
         ),
         iconTheme: const IconThemeData(
-          color: StradioColors.warmIvory,
+          color: StradioColors.midnight,
           size: 22,
         ),
       ),
       cardTheme: CardThemeData(
-        color: StradioColors.surfaceDark,
+        color: StradioColors.whiteSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(StradioRadii.card),
-          side: const BorderSide(color: StradioColors.borderDark, width: 1),
+          side: BorderSide.none,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -230,24 +254,20 @@ class StradioTheme {
         ),
         labelStyle: StradioTypography.interLabel(
           fontSize: 13,
-          color: StradioColors.mutedIvory,
+          color: StradioColors.secondaryNeutral,
           letterSpacing: 0.2,
         ),
         hintStyle: StradioTypography.interBody(
           fontSize: 13,
-          color: StradioColors.mutedIvory,
-        ),
-        helperStyle: StradioTypography.interBody(
-          fontSize: 12,
-          color: StradioColors.mutedIvory,
+          color: StradioColors.mutedNeutral,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(StradioRadii.control),
-          borderSide: const BorderSide(color: StradioColors.borderDark),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(StradioRadii.control),
-          borderSide: const BorderSide(color: StradioColors.borderDark),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(StradioRadii.control),
@@ -265,7 +285,7 @@ class StradioTheme {
           ),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return StradioColors.borderDark.withValues(alpha: 0.45);
+              return StradioColors.surfaceSubtle;
             }
             if (states.contains(WidgetState.pressed)) {
               return const Color(0xFFE86049);
@@ -277,34 +297,24 @@ class StradioTheme {
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return StradioColors.mutedIvory;
+              return StradioColors.mutedNeutral;
             }
-            return StradioColors.midnight;
+            return Colors.white;
           }),
           overlayColor: WidgetStatePropertyAll(
-            StradioColors.warmIvory.withValues(alpha: 0.12),
+            Colors.white.withValues(alpha: 0.16),
           ),
-          side: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.focused)) {
-              return const BorderSide(color: StradioColors.warmIvory, width: 2);
-            }
-            return BorderSide.none;
-          }),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(StradioRadii.control),
+              borderRadius: BorderRadius.circular(999), // Stadium per Ref 1 & 2
             ),
           ),
-          mouseCursor: WidgetStateProperty.resolveWith((states) {
-            return states.contains(WidgetState.disabled)
-                ? SystemMouseCursors.forbidden
-                : SystemMouseCursors.click;
-          }),
+          elevation: const WidgetStatePropertyAll(0),
           textStyle: WidgetStatePropertyAll(
             StradioTypography.soraHeading(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: StradioColors.midnight,
+              color: Colors.white,
               letterSpacing: 0.2,
             ),
           ),
@@ -318,75 +328,28 @@ class StradioTheme {
           ),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return StradioColors.mutedIvory;
+              return StradioColors.mutedNeutral;
             }
-            return StradioColors.warmIvory;
+            return StradioColors.midnight;
           }),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.pressed)) {
-              return StradioColors.borderDark.withValues(alpha: 0.35);
+              return StradioColors.surfaceSubtle;
             }
-            if (states.contains(WidgetState.hovered)) {
-              return StradioColors.borderDark.withValues(alpha: 0.2);
-            }
-            return StradioColors.surfaceSubtle;
+            return StradioColors.whiteSurface;
           }),
-          side: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.focused)) {
-              return const BorderSide(
-                color: StradioColors.sonicCoral,
-                width: 2,
-              );
-            }
-            if (states.contains(WidgetState.hovered)) {
-              return const BorderSide(
-                color: StradioColors.rhythmViolet,
-                width: 1.5,
-              );
-            }
-            return const BorderSide(color: StradioColors.borderDark, width: 1);
-          }),
+          side: const WidgetStatePropertyAll(BorderSide.none), // Borderless
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(StradioRadii.control),
+              borderRadius: BorderRadius.circular(999),
             ),
           ),
-          mouseCursor: WidgetStateProperty.resolveWith((states) {
-            return states.contains(WidgetState.disabled)
-                ? SystemMouseCursors.forbidden
-                : SystemMouseCursors.click;
-          }),
           textStyle: WidgetStatePropertyAll(
             StradioTypography.interLabel(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: StradioColors.warmIvory,
+              color: StradioColors.midnight,
               letterSpacing: 0.2,
-            ),
-          ),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
-          foregroundColor: const WidgetStatePropertyAll(StradioColors.warmIvory),
-          mouseCursor: WidgetStateProperty.resolveWith((states) {
-            return states.contains(WidgetState.disabled)
-                ? SystemMouseCursors.forbidden
-                : SystemMouseCursors.click;
-          }),
-          side: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.focused)) {
-              return const BorderSide(
-                color: StradioColors.sonicCoral,
-                width: 1.5,
-              );
-            }
-            return BorderSide.none;
-          }),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(StradioRadii.control),
             ),
           ),
         ),
@@ -394,9 +357,9 @@ class StradioTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return StradioColors.warmIvory;
+            return Colors.white;
           }
-          return StradioColors.mutedIvory;
+          return StradioColors.secondaryNeutral;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -404,28 +367,23 @@ class StradioTheme {
           }
           return StradioColors.surfaceSubtle;
         }),
-        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.focused)) {
-            return StradioColors.warmIvory;
-          }
-          if (states.contains(WidgetState.selected)) {
-            return StradioColors.sonicCoral;
-          }
-          return StradioColors.borderDark;
-        }),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: StradioColors.surfaceDark,
+        backgroundColor: StradioColors.midnight,
         contentTextStyle: StradioTypography.interBody(
-          color: StradioColors.warmIvory,
+          color: Colors.white,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(StradioRadii.control),
-          side: const BorderSide(color: StradioColors.borderDark),
+          side: BorderSide.none,
         ),
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
+
+  /// Backward-compatible dark theme alias pointing to modern light theme
+  static ThemeData get darkTheme => lightTheme;
 }
 
