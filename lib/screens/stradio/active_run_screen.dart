@@ -799,63 +799,21 @@ class _ActiveRunTopBar extends StatelessWidget {
       _RunStreamState.sensorError => ('STANDBY', StradioColors.statusPaused),
     };
 
-    final runnerLabel = participantId == 'P01' ? 'Mark C.' : participantId;
-    final monogram = participantId == 'P01'
-        ? 'MC'
-        : (participantId.length >= 2
-              ? participantId.substring(0, 2).toUpperCase()
-              : participantId.toUpperCase());
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Left: Editorial Sora Monogram Avatar + Runner Name + Solid Status Pill
+        // Left: Official Stradio Brand Logo + Dynamic Status Pill
         Flexible(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                key: const Key('runner_monogram_avatar'),
-                width: 36,
-                height: 36,
-                padding: const EdgeInsets.all(2.5),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: palette.surface,
-                  boxShadow: palette.cardShadow,
-                ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: palette.accentCoral.withValues(alpha: 0.16),
-                  ),
-                  child: Center(
-                    child: Text(
-                      monogram,
-                      style: StradioTypography.soraHeading(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: palette.accentCoral,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                  ),
-                ),
+              Image.asset(
+                'assets/images/stradio-logo.png',
+                key: const Key('stradio_header_logo'),
+                height: 28,
+                fit: BoxFit.contain,
               ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  runnerLabel,
-                  overflow: TextOverflow.ellipsis,
-                  style: StradioTypography.interLabel(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: palette.textPrimary,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -979,9 +937,9 @@ class _EditorialRunHeader extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                   children: [
-                    const TextSpan(text: 'Find Your '),
+                    const TextSpan(text: 'Stride to the '),
                     TextSpan(
-                      text: 'Stride',
+                      text: 'Beat',
                       style: TextStyle(color: palette.accentCoral),
                     ),
                   ],

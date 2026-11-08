@@ -527,23 +527,29 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 8,
+                          Row(
                             children: [
-                              _DiagnosticStatItem(
-                                label: 'LIVE TIMESTAMP (NS)',
-                                value: health.latestTimestampNs > 0
-                                    ? '${health.latestTimestampNs}'
-                                    : 'Awaiting stream',
+                              Expanded(
+                                child: _DiagnosticStatItem(
+                                  label: 'TIMESTAMP (NS)',
+                                  value: health.latestTimestampNs > 0
+                                      ? '${health.latestTimestampNs}'
+                                      : 'Standby',
+                                ),
                               ),
-                              _DiagnosticStatItem(
-                                label: 'SAMPLE DROPS',
-                                value: '${health.sampleDrops} drops',
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _DiagnosticStatItem(
+                                  label: 'SAMPLE DROPS',
+                                  value: '${health.sampleDrops} drops',
+                                ),
                               ),
-                              _DiagnosticStatItem(
-                                label: 'BUFFERED SAMPLES',
-                                value: '${health.sampleCount}',
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _DiagnosticStatItem(
+                                  label: 'BUFFERED SAMPLES',
+                                  value: '${health.sampleCount}',
+                                ),
                               ),
                             ],
                           ),
@@ -968,6 +974,7 @@ class _DiagnosticStatItem extends StatelessWidget {
         children: [
           Text(
             label,
+            overflow: TextOverflow.ellipsis,
             style: StradioTypography.interLabel(
               fontSize: 10,
               color: palette.textSecondary,
@@ -976,6 +983,7 @@ class _DiagnosticStatItem extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             value,
+            overflow: TextOverflow.ellipsis,
             style: StradioTypography.interLabel(
               fontSize: 12,
               fontWeight: FontWeight.w600,

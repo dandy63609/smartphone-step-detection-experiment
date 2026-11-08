@@ -240,8 +240,8 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 | Sprint | Fokus Utama | Target Deliverable | Status |
 | :--- | :--- | :--- | :--- |
 | **Sprint 1** | **Stream & Lifecycle Bug Fixes** | Auto-recovery sensor stream, restart session mulus setelah Finish, eliminasi false sensorError | `DONE` |
-| **Sprint 2** | **Visual Identity & Polish** | Logo Stradio header, headline *"Stride to the Beat"*, 3-kolom Sensor Labs, button spinner | `READY / NEXT` |
-| **Sprint 3** | **Active Session Persistence** | Pilihan A: Incremental auto-flush buffer ke cache lokal (`.temp_run.json`), crash recovery dialog | `PLANNING` |
+| **Sprint 2** | **Visual Identity & Polish** | Logo Stradio header, headline *"Stride to the Beat"*, 3-kolom Sensor Labs, button spinner | `DONE` |
+| **Sprint 3** | **Active Session Persistence** | Pilihan A: Incremental auto-flush buffer ke cache lokal (`.temp_run.json`), crash recovery dialog | `READY / NEXT` |
 | **Sprint 4** | **Background Service & Lockscreen Control** | Android Foreground Service (`flutter_foreground_task`), lockscreen interactive notification | `PLANNING` |
 
 ---
@@ -259,7 +259,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 7.3 Rincian Sprint 2: Visual Identity & UX Micro-Interactions `[STATUS: READY / NEXT]`
+### 7.3 Rincian Sprint 2: Visual Identity & UX Micro-Interactions `[STATUS: DONE]`
 1. **Header Stradio Brand Logo:**
    - Mengganti avatar dummy "MC" dan nama "Mark C." di `active_run_screen.dart` dengan logo resmi `assets/images/stradio-logo.png` (tinggi ~30–32dp) berdampingan dengan *Dynamic Status Pill* (`PAUSED` / `RUNNING`).
 2. **Brand Headline Evolution:**

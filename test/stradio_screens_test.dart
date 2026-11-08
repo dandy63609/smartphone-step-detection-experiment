@@ -345,8 +345,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('runner_monogram_avatar')), findsOneWidget);
-      expect(find.text('MC'), findsOneWidget);
+      expect(find.byKey(const Key('stradio_header_logo')), findsOneWidget);
       expect(find.byKey(const Key('theme_mode_toggle_button')), findsOneWidget);
       await tester.tap(find.byKey(const Key('theme_mode_toggle_button')));
       await tester.pumpAndSettle();

@@ -375,16 +375,23 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                 minimumSize: const Size.fromHeight(56),
                                 shape: const StadiumBorder(),
                               ),
-                              child: Text(
-                                _saving
-                                    ? 'Saving Workout & Telemetry...'
-                                    : 'Save & Finish Workout',
-                                style: StradioTypography.soraHeading(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              child: _saving
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Save & Finish Workout',
+                                      style: StradioTypography.soraHeading(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ),
                           const SizedBox(height: 10),
