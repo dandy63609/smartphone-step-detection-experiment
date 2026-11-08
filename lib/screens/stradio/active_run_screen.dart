@@ -17,6 +17,7 @@ import 'post_run_summary_screen.dart';
 import 'sensor_labs_sheet.dart';
 
 enum _RunStreamState { connecting, running, paused, sensorError }
+enum _RecoveryAction { reviewAndSave, discard }
 
 /// Screen 2: STRADIO Active Run & Reactive Music Screen (Point 7 Revamp).
 ///
@@ -99,7 +100,180 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     _labSettings = widget.initialLabSettings;
 
     _resetDetectors();
-    _initializeRunSession();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkUnfinishedSessionAndInitialize();
+    });
+  }
+
+  Future<void> _checkUnfinishedSessionAndInitialize() async {
+    if (!mounted) return;
+    try {
+      final cached = await _store.loadActiveSessionCache();
+      if (cached != null && cached.samples.isNotEmpty && mounted) {
+        final action = await _promptCrashRecoveryDialog(cached);
+        if (!mounted) return;
+        if (action == _RecoveryAction.reviewAndSave) {
+          await _recoverAndReviewSession(cached);
+          return;
+        } else if (action == _RecoveryAction.discard) {
+          await _store.clearActiveSessionCache();
+        }
+      }
+    } catch (_) {
+      // Ignore cache recovery errors and start fresh session.
+    }
+    if (!mounted) return;
+    await _initializeRunSession();
+  }
+
+  void _flushActiveSessionCache() {
+    if (_activeSamples.isEmpty) return;
+    final snapshot = ActiveSessionSnapshot(
+      recordingId: _recordingId,
+      createdAt: DateTime.now(),
+      config: _labSettings.toExperimentConfig(),
+      targetBpm: _labSettings.targetBpm,
+      activeDurationSeconds: _activeDurationSeconds,
+      samples: List<SensorSample>.from(_activeSamples),
+    );
+    unawaited(_store.saveActiveSessionCache(snapshot));
+  }
+
+  Future<_RecoveryAction?> _promptCrashRecoveryDialog(
+    ActiveSessionSnapshot snapshot,
+  ) async {
+    final palette = StradioPalette.of(context);
+    final count = snapshot.samples.length;
+    final durSec = snapshot.activeDurationSeconds.round();
+    final durFormatted =
+        '${(durSec ~/ 60).toString().padLeft(2, '0')}:${(durSec % 60).toString().padLeft(2, '0')}';
+
+    return showDialog<_RecoveryAction>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: palette.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(StradioRadii.squircle),
+          ),
+          title: Text(
+            'Unfinished Run Detected',
+            style: StradioTypography.soraHeading(
+              fontSize: 18,
+              color: palette.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            'Stradio found an unsaved run session ($count sensor samples, $durFormatted duration). Would you like to review and save it to your workout history?',
+            style: StradioTypography.interBody(
+              fontSize: 14,
+              color: palette.textSecondary,
+            ),
+          ),
+          actionsPadding:
+              const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+          actions: [
+            TextButton(
+              key: const Key('discard_recovered_session_button'),
+              onPressed: () => Navigator.of(ctx).pop(_RecoveryAction.discard),
+              style: TextButton.styleFrom(
+                foregroundColor: palette.textSecondary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              child: const Text('Discard'),
+            ),
+            ElevatedButton(
+              key: const Key('review_recovered_session_button'),
+              onPressed: () =>
+                  Navigator.of(ctx).pop(_RecoveryAction.reviewAndSave),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: StradioColors.sonicCoral,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(StradioRadii.pill),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text(
+                'Review & Save',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _recoverAndReviewSession(ActiveSessionSnapshot cached) async {
+    final immutableSamples = List<SensorSample>.unmodifiable(cached.samples);
+    final config = cached.config;
+    final replayBoth = StepDetector.replayBoth(
+      immutableSamples,
+      config.parameters,
+    );
+    final replayAllFour = StepDetector.replayAllFour(
+      immutableSamples,
+      config.parameters,
+    );
+
+    final primaryVariant =
+        config.primaryLiveAlgorithm == ThresholdAlgorithm.adaptiveMidpoint
+            ? AlgorithmVariant.a1MidpointRaw
+            : AlgorithmVariant.b1MeanSdRaw;
+    final primaryDetections = replayAllFour[primaryVariant] ?? const [];
+
+    final recording = SavedRecording(
+      recordingId: cached.recordingId,
+      createdAt: cached.createdAt,
+      config: config,
+      samples: immutableSamples,
+      liveStepCount: primaryDetections.length,
+      replayDetections: replayBoth,
+      replayVariantDetections: replayAllFour,
+    );
+
+    final metrics = RunMetricsCalculator.computeSummary(
+      detections: primaryDetections,
+      samples: immutableSamples,
+      activity: config.activity,
+      activeDurationSeconds: math.max(
+        cached.activeDurationSeconds,
+        recording.durationSeconds,
+      ),
+      targetBpm: cached.targetBpm,
+    );
+
+    final health = RunMetricsCalculator.analyzeSensorHealth(
+      samples: immutableSamples,
+      requestedRateHz: config.requestedSamplingRateHz,
+    );
+
+    if (!mounted) return;
+
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => PostRunSummaryScreen(
+          recording: recording,
+          metrics: metrics,
+          sensorHealth: health,
+          store: _store,
+          postHogService: _postHogService,
+        ),
+      ),
+    );
+
+    await _store.clearActiveSessionCache();
+
+    if (!mounted) return;
+    _resetDetectors();
+    await _initializeRunSession();
   }
 
   void _resetDetectors() {
@@ -181,6 +355,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     if (_recordingService.isRecording) {
       await _recordingService.stop();
     }
+    if (!mounted) return;
 
     try {
       _recordingService.start(
@@ -196,6 +371,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         },
       );
 
+      if (!mounted) return;
       setState(() {
         if (!preserveErrorState) {
           _streamState = _RunStreamState.paused;
@@ -203,6 +379,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         }
       });
     } on Object catch (error) {
+      if (!mounted) return;
       setState(() {
         _streamState = _RunStreamState.sensorError;
         _sensorErrorText = 'Could not start accelerometer stream: $error';
@@ -225,6 +402,10 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
 
     _activeSamples.add(sample);
     _latestSample = sample;
+
+    if (_activeSamples.length % 100 == 0) {
+      _flushActiveSessionCache();
+    }
 
     DetectorOutput? primaryOut;
     for (final variant in AlgorithmVariant.values) {
@@ -336,6 +517,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
 
   Future<void> _togglePauseResume() async {
     if (_streamState == _RunStreamState.running) {
+      _flushActiveSessionCache();
       setState(() {
         _streamState = _RunStreamState.paused;
       });
@@ -481,6 +663,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
 
     if (!mounted) return;
     if (savedAndFinished == true) {
+      unawaited(_store.clearActiveSessionCache());
       setState(() {
         _labSettings = _labSettings.copyWith(
           trialNumber: _labSettings.trialNumber + 1,
@@ -937,9 +1120,9 @@ class _EditorialRunHeader extends StatelessWidget {
                     letterSpacing: -0.5,
                   ),
                   children: [
-                    const TextSpan(text: 'Stride to the '),
+                    const TextSpan(text: 'Run the '),
                     TextSpan(
-                      text: 'Beat',
+                      text: 'Vibe',
                       style: TextStyle(color: palette.accentCoral),
                     ),
                   ],

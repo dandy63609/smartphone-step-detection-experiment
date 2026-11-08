@@ -57,15 +57,15 @@ Bagian ini memuat visualisasi tata letak ASCII terkini untuk **Layar Utama (`Act
 
 Desain ini telah divalidasi dan diterapkan di kode nyata:
 * **Branding Asli:** Mengganti avatar dummy "Mark C." dengan **Logo Resmi Stradio** + Status Pill dinamis.
-* **Slogan & Subtitle Kuat:** *"Stride to the Beat"* + *"Neon Stride · Adaptive Stride"* (bebas dari teks BPM redundan).
+* **Slogan & Subtitle Kuat:** *"Run the Vibe"* + *"Neon Stride · Adaptive Stride"* (bebas dari teks BPM redundan).
 * **Waveform Rhythm Core:** Menampilkan **Rhythm Core Emblem (`( ◎ )`)** non-button di tengah visualizer yang berdenyut reaktif mengikuti tempo & entakan kaki.
 * **Kontrol Terpusat (Zero-Ambiguity):** Seluruh aksi kendali lari (*Play/Pause* bulat Sonic Coral dan *Finish Run* stadium pill) berada strictly 100% di **Bottom Thumb Zone**.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ [ STRADIO LOGO ]  [● PAUSED]          [ ☀/☾ ] [ ⚗ Labs ]    │
+│ [ STRADIO LOGO ]  [● PAUSED]          [ ☀/☾ ] [ ⚗ Labs ]   │
 ├─────────────────────────────────────────────────────────────┤
-│ Stride to the Beat                                          │
+│ Run the Vibe                                                │
 │ Neon Stride · Adaptive Stride                               │
 │                                                             │
 │ ┌─────────────────────────────────────────────────────────┐ │
@@ -87,7 +87,7 @@ Desain ini telah divalidasi dan diterapkan di kode nyata:
 │                                                             │
 │ ┌─────────────────────────────────────────────────────────┐ │
 │ │   ╭─────────╮                                           │ │
-│ │   │ ▶ PLAY  │        [        FINISH RUN        ]        │ │
+│ │   │ ▶ PLAY  │        [        FINISH RUN        ]       │ │
 │ │   ╰─────────╯                                           │ │
 │ └─────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
@@ -163,9 +163,9 @@ Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasi
 │                                                               │
 ├───────────────────────────────────────────────────────────────┤
 │    ┌─────────────────────────────────────────────────────┐    │
-│    │   🏠         🎵           ╭─────╮         📊        ⚙️   │    │
+│    │   🏠         🎵          ╭─────╮         📊        ⚙️   │    │
 │    │  Home     Library         │ RUN │      Activity  Settings│    │
-│    │                           ╰─────╯                    │    │
+│    │                           ╰─────╯                   │    │
 │    └─────────────────────────────────────────────────────┘    │
 └───────────────────────────────────────────────────────────────┘
 ```
@@ -240,9 +240,9 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 | Sprint | Fokus Utama | Target Deliverable | Status |
 | :--- | :--- | :--- | :--- |
 | **Sprint 1** | **Stream & Lifecycle Bug Fixes** | Auto-recovery sensor stream, restart session mulus setelah Finish, eliminasi false sensorError | `DONE` |
-| **Sprint 2** | **Visual Identity & Polish** | Logo Stradio header, headline *"Stride to the Beat"*, 3-kolom Sensor Labs, button spinner | `DONE` |
-| **Sprint 3** | **Active Session Persistence** | Pilihan A: Incremental auto-flush buffer ke cache lokal (`.temp_run.json`), crash recovery dialog | `READY / NEXT` |
-| **Sprint 4** | **Background Service & Lockscreen Control** | Android Foreground Service (`flutter_foreground_task`), lockscreen interactive notification | `PLANNING` |
+| **Sprint 2** | **Visual Identity & Polish** | Logo Stradio header, headline *"Run the Vibe"*, 3-kolom Sensor Labs, button spinner | `DONE` |
+| **Sprint 3** | **Active Session Persistence** | Pilihan A: Incremental auto-flush buffer ke cache lokal (`.temp_run.json`), crash recovery dialog | `DONE` |
+| **Sprint 4** | **Background Service & Lockscreen Control** | Android Foreground Service (`flutter_foreground_task`), lockscreen interactive notification | `READY / NEXT` |
 
 ---
 
@@ -263,7 +263,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 1. **Header Stradio Brand Logo:**
    - Mengganti avatar dummy "MC" dan nama "Mark C." di `active_run_screen.dart` dengan logo resmi `assets/images/stradio-logo.png` (tinggi ~30–32dp) berdampingan dengan *Dynamic Status Pill* (`PAUSED` / `RUNNING`).
 2. **Brand Headline Evolution:**
-   - Mengganti slogan generik *"Find Your Stride"* menjadi *"Stride to the Beat"* (menggambarkan konsep sejati Stradio: Strava + Audio).
+   - Mengganti slogan generik *"Find Your Stride"* menjadi *"Run the Vibe"* (menggambarkan konsep sejati Stradio: Strava + Audio).
 3. **Sensor Labs 3-Kolom Sejajar:**
    - Mengubah layout `Wrap` 2+1 pada `SensorManager Active (100 Hz)` di `sensor_labs_sheet.dart` menjadi `Row` 3 kolom berimbang (`TIMESTAMP`, `SAMPLE DROPS`, `BUFFERED SAMPLES`).
 4. **Micro-Interaction Loading pada Tombol Save & Finish:**
@@ -271,7 +271,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 7.4 Rincian Sprint 3: Active Session Persistence (Pilihan A: Auto-Flush Cache) `[STATUS: PLANNING]`
+### 7.4 Rincian Sprint 3: Active Session Persistence (Pilihan A: Auto-Flush Cache) `[STATUS: DONE]`
 1. **Incremental Streaming Append (Pilihan A):**
    - Setiap batch 100 sampel (~1 detik) atau saat sesi dijeda, data mentah otomatis di-append ke file cache sementara di storage lokal (`.temp_active_run.json`).
 2. **Unfinished Session Detection (Crash Recovery):**
@@ -280,7 +280,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 7.5 Rincian Sprint 4: Background Service & Interactive Notification `[STATUS: PLANNING]`
+### 7.5 Rincian Sprint 4: Background Service & Interactive Notification `[STATUS: READY / NEXT]`
 1. **Android Foreground Service (`flutter_foreground_task`):**
    - Mencegah OS Android (Doze Mode & Battery Saver) mematikan sensor akselerometer saat layar terkunci (*screen sleep*) atau saat ponsel berada di dalam saku celana (Kondisi E5–E8).
 2. **Interactive Notification (Media/Workout Style):**

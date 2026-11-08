@@ -87,6 +87,70 @@ SavedRecording recordingFromJson(String source) {
   );
 }
 
+/// Snapshot of an in-progress run session cached to local storage
+/// to protect data from unexpected app closure or crash (Sprint 3).
+class ActiveSessionSnapshot {
+  const ActiveSessionSnapshot({
+    required this.recordingId,
+    required this.createdAt,
+    required this.config,
+    required this.targetBpm,
+    required this.activeDurationSeconds,
+    required this.samples,
+  });
+
+  final String recordingId;
+  final DateTime createdAt;
+  final ExperimentConfig config;
+  final int targetBpm;
+  final double activeDurationSeconds;
+  final List<SensorSample> samples;
+
+  Map<String, dynamic> toMap() => {
+    'recording_id': recordingId,
+    'created_at': createdAt.toIso8601String(),
+    'config': config.toMap(),
+    'target_bpm': targetBpm,
+    'active_duration_seconds': activeDurationSeconds,
+    'samples': [for (final s in samples) s.toMap()],
+  };
+
+  factory ActiveSessionSnapshot.fromMap(Map<String, dynamic> map) {
+    final id = map['recording_id']?.toString() ?? '';
+    final createdAt =
+        DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+        DateTime.now();
+    final configMap = map['config'];
+    final config = configMap is Map<String, dynamic>
+        ? ExperimentConfig.fromMap(configMap)
+        : const ExperimentConfig(
+            participantId: 'P01',
+            activity: Activity.walking,
+            phonePlacement: PhonePlacement.hand,
+            placementDetail: 'Right hand',
+            trialNumber: 1,
+            primaryLiveAlgorithm: ThresholdAlgorithm.adaptiveMidpoint,
+            targetSteps: 100,
+          );
+    final targetBpm = (map['target_bpm'] as num?)?.toInt() ?? 118;
+    final activeDurationSeconds =
+        (map['active_duration_seconds'] as num?)?.toDouble() ?? 0.0;
+    final rawSamples = map['samples'] as List? ?? const [];
+    final samples = [
+      for (final row in rawSamples)
+        if (row is Map<String, dynamic>) SensorSample.fromMap(id, row),
+    ];
+    return ActiveSessionSnapshot(
+      recordingId: id,
+      createdAt: createdAt,
+      config: config,
+      targetBpm: targetBpm,
+      activeDurationSeconds: activeDurationSeconds,
+      samples: samples,
+    );
+  }
+}
+
 /// Local persistence for recordings.
 abstract class RecordingStore {
   Future<List<SavedRecording>> list();
@@ -100,6 +164,16 @@ abstract class RecordingStore {
   /// Clears all stored recordings, allowing researchers or users to reset
   /// storage and start fresh.
   Future<void> clearAll();
+
+  /// Saves an in-progress active run session cache to protect against crashes
+  /// or unexpected app termination (Sprint 3 Option A).
+  Future<void> saveActiveSessionCache(ActiveSessionSnapshot snapshot);
+
+  /// Loads the active session cache if one exists from an uncompleted run.
+  Future<ActiveSessionSnapshot?> loadActiveSessionCache();
+
+  /// Clears the active session cache once a run has been completed or discarded.
+  Future<void> clearActiveSessionCache();
 }
 
 /// Stores each recording as a JSON file in the app documents folder.
@@ -169,6 +243,50 @@ class FileRecordingStore implements RecordingStore {
           // Ignore deletion error for locked files
         }
       }
+    }
+    await clearActiveSessionCache();
+  }
+
+  Future<File> _cacheFile() async {
+    final directory = await _directory();
+    return File('${directory.path}/.temp_active_run.json');
+  }
+
+  @override
+  Future<void> saveActiveSessionCache(ActiveSessionSnapshot snapshot) async {
+    try {
+      final file = await _cacheFile();
+      await file.parent.create(recursive: true);
+      await file.writeAsString(jsonEncode(snapshot.toMap()), flush: true);
+    } on Object {
+      // Ignore cache write errors in restricted sandbox
+    }
+  }
+
+  @override
+  Future<ActiveSessionSnapshot?> loadActiveSessionCache() async {
+    try {
+      final file = await _cacheFile();
+      if (!await file.exists()) return null;
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) return null;
+      final map = jsonDecode(content);
+      if (map is! Map<String, dynamic>) return null;
+      return ActiveSessionSnapshot.fromMap(map);
+    } on Object {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> clearActiveSessionCache() async {
+    try {
+      final file = await _cacheFile();
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } on Object {
+      // Ignore cache deletion errors
     }
   }
 }

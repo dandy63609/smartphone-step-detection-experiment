@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -10,6 +12,7 @@ import 'package:smartphone_step_detection_experiment/services/recording_service.
 
 class InMemoryRecordingStore implements RecordingStore {
   final List<SavedRecording> saved = [];
+  ActiveSessionSnapshot? activeCache;
 
   @override
   Future<List<SavedRecording>> list() async => List.unmodifiable(saved);
@@ -26,6 +29,20 @@ class InMemoryRecordingStore implements RecordingStore {
   @override
   Future<void> clearAll() async {
     saved.clear();
+    activeCache = null;
+  }
+
+  @override
+  Future<void> saveActiveSessionCache(ActiveSessionSnapshot snapshot) async {
+    activeCache = snapshot;
+  }
+
+  @override
+  Future<ActiveSessionSnapshot?> loadActiveSessionCache() async => activeCache;
+
+  @override
+  Future<void> clearActiveSessionCache() async {
+    activeCache = null;
   }
 }
 
@@ -439,6 +456,208 @@ void main() {
       await tester.pump();
       expect(find.text('RUNNING'), findsOneWidget);
       expect(recordingService.isRecording, isTrue);
+    },
+  );
+
+  testWidgets(
+    'Sprint 3: auto-flushes active session on pause and clears cache on save',
+    (tester) async {
+      final store = InMemoryRecordingStore();
+      final postHog = PostHogTelemetryService(
+        apiKey: 'phc_test_stradio',
+        transport: (uri, payload) async => 200,
+      );
+      final accelController = StreamController<AccelerometerEvent>.broadcast();
+      final userAccelController = StreamController<UserAccelerometerEvent>.broadcast();
+      final recordingService = RecordingService(
+        source: (_) => accelController.stream,
+        userSource: (_) => userAccelController.stream,
+      );
+
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          recordingService: recordingService,
+          postHogService: postHog,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Start run and stream sensor samples
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+
+      accelController.add(AccelerometerEvent(0.1, 0.2, 9.81, DateTime.now()));
+      userAccelController.add(UserAccelerometerEvent(0.0, 0.0, 0.0, DateTime.now()));
+      await tester.pump();
+
+      // Pause run -> should trigger auto-flush to cache
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('PAUSED'), findsOneWidget);
+
+      expect(store.activeCache, isNotNull);
+      expect(store.activeCache!.samples.isNotEmpty, isTrue);
+
+      // Finish run -> Save & Finish Workout
+      await tester.tap(find.byKey(const Key('finish_run_button')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('save_finish_workout_button')));
+      await tester.pumpAndSettle();
+
+      // Store activeCache should be cleanly cleared
+      expect(store.activeCache, isNull);
+
+      await accelController.close();
+      await userAccelController.close();
+    },
+  );
+
+  testWidgets(
+    'Sprint 3: displays crash recovery dialog on launch, reviews session, and saves workout',
+    (tester) async {
+      final store = InMemoryRecordingStore();
+      final postHog = PostHogTelemetryService(
+        apiKey: 'phc_test_stradio',
+        transport: (uri, payload) async => 200,
+      );
+      final recordingService = RecordingService(
+        source: (_) => Stream.value(
+          AccelerometerEvent(0.1, 0.2, 9.81, DateTime.now()),
+        ),
+        userSource: (_) => Stream.value(
+          UserAccelerometerEvent(0.0, 0.0, 0.0, DateTime.now()),
+        ),
+      );
+
+      // Pre-seed an unsaved session into cache
+      store.activeCache = ActiveSessionSnapshot(
+        recordingId: 'REC_CRASH_TEST',
+        createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
+        config: const ExperimentConfig(
+          participantId: 'P01',
+          activity: Activity.walking,
+          phonePlacement: PhonePlacement.hand,
+          placementDetail: 'right hand',
+          trialNumber: 1,
+          primaryLiveAlgorithm: ThresholdAlgorithm.adaptiveMidpoint,
+        ),
+        targetBpm: 125,
+        activeDurationSeconds: 42.0,
+        samples: List.generate(
+          20,
+          (i) => SensorSample(
+            recordingId: 'REC_CRASH_TEST',
+            sampleIndex: i,
+            timestampNs: i * 10000000,
+            axMps2: 0.1,
+            ayMps2: 0.2,
+            azMps2: 9.8 + (i % 2 == 0 ? 3.0 : -1.0),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          recordingService: recordingService,
+          postHogService: postHog,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Crash recovery dialog should be visible
+      expect(find.text('Unfinished Run Detected'), findsOneWidget);
+      expect(find.textContaining('20 sensor samples'), findsOneWidget);
+
+      // Tap Review & Save
+      final reviewButton = find.byKey(const Key('review_recovered_session_button'));
+      expect(reviewButton, findsOneWidget);
+      await tester.tap(reviewButton);
+      await tester.pumpAndSettle();
+
+      // Should land directly on PostRunSummaryScreen
+      expect(find.text('Run Complete! : You Found Your Rhythm'), findsOneWidget);
+      expect(find.text('Save & Finish Workout'), findsOneWidget);
+
+      // Save workout
+      await tester.tap(find.byKey(const Key('save_finish_workout_button')));
+      await tester.pumpAndSettle();
+
+      // Cache is cleared and workout is saved in store
+      expect(store.activeCache, isNull);
+      expect(store.saved.length, 1);
+      expect(store.saved.first.recordingId, 'REC_CRASH_TEST');
+      expect(find.text('PAUSED'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Sprint 3: displays crash recovery dialog on launch and discards cleanly',
+    (tester) async {
+      final store = InMemoryRecordingStore();
+      final postHog = PostHogTelemetryService(
+        apiKey: 'phc_test_stradio',
+        transport: (uri, payload) async => 200,
+      );
+      final recordingService = RecordingService(
+        source: (_) => Stream.value(
+          AccelerometerEvent(0.1, 0.2, 9.81, DateTime.now()),
+        ),
+        userSource: (_) => Stream.value(
+          UserAccelerometerEvent(0.0, 0.0, 0.0, DateTime.now()),
+        ),
+      );
+
+      // Pre-seed an unsaved session into cache
+      store.activeCache = ActiveSessionSnapshot(
+        recordingId: 'REC_DISCARD_TEST',
+        createdAt: DateTime.now(),
+        config: const ExperimentConfig(
+          participantId: 'P01',
+          activity: Activity.walking,
+          phonePlacement: PhonePlacement.hand,
+          placementDetail: 'right hand',
+          trialNumber: 1,
+          primaryLiveAlgorithm: ThresholdAlgorithm.adaptiveMidpoint,
+        ),
+        targetBpm: 120,
+        activeDurationSeconds: 10.0,
+        samples: [
+          SensorSample(
+            recordingId: 'REC_DISCARD_TEST',
+            sampleIndex: 0,
+            timestampNs: 0,
+            axMps2: 0,
+            ayMps2: 0,
+            azMps2: 9.81,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          recordingService: recordingService,
+          postHogService: postHog,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unfinished Run Detected'), findsOneWidget);
+
+      // Tap Discard
+      final discardButton = find.byKey(const Key('discard_recovered_session_button'));
+      expect(discardButton, findsOneWidget);
+      await tester.tap(discardButton);
+      await tester.pumpAndSettle();
+
+      // Cache is cleared, dialog is closed, back on ActiveRunScreen
+      expect(store.activeCache, isNull);
+      expect(find.text('Unfinished Run Detected'), findsNothing);
+      expect(find.text('PAUSED'), findsOneWidget);
     },
   );
 }

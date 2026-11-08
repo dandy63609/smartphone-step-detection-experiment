@@ -8,6 +8,7 @@ import 'package:smartphone_step_detection_experiment/services/recording_service.
 
 class MockRecordingStore implements RecordingStore {
   final List<SavedRecording> _items = [];
+  ActiveSessionSnapshot? activeCache;
 
   @override
   Future<List<SavedRecording>> list() async => List.unmodifiable(_items);
@@ -22,7 +23,23 @@ class MockRecordingStore implements RecordingStore {
       );
 
   @override
-  Future<void> clearAll() async => _items.clear();
+  Future<void> clearAll() async {
+    _items.clear();
+    activeCache = null;
+  }
+
+  @override
+  Future<void> saveActiveSessionCache(ActiveSessionSnapshot snapshot) async {
+    activeCache = snapshot;
+  }
+
+  @override
+  Future<ActiveSessionSnapshot?> loadActiveSessionCache() async => activeCache;
+
+  @override
+  Future<void> clearActiveSessionCache() async {
+    activeCache = null;
+  }
 }
 
 void main() {

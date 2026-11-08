@@ -483,6 +483,48 @@ void main() {
         }
       }
     });
+
+    test('FileRecordingStore caches active session and recovers cleanly', () async {
+      final tempDir = await Directory.systemTemp.createTemp('stradio_cache_test_');
+      try {
+        final store = FileRecordingStore(directory: () async => tempDir);
+        expect(await store.loadActiveSessionCache(), isNull);
+
+        final sample = _sample(0, 0, 9.81);
+        final snapshot = ActiveSessionSnapshot(
+          recordingId: 'REC_RECOVERY_001',
+          createdAt: DateTime(2026, 11, 8, 20, 0),
+          config: const ExperimentConfig(
+            participantId: 'P01',
+            activity: Activity.walking,
+            phonePlacement: PhonePlacement.hand,
+            placementDetail: 'right hand',
+            trialNumber: 1,
+            primaryLiveAlgorithm: ThresholdAlgorithm.adaptiveMidpoint,
+          ),
+          targetBpm: 120,
+          activeDurationSeconds: 15.5,
+          samples: [sample],
+        );
+
+        await store.saveActiveSessionCache(snapshot);
+
+        final loaded = await store.loadActiveSessionCache();
+        expect(loaded, isNotNull);
+        expect(loaded!.recordingId, 'REC_RECOVERY_001');
+        expect(loaded.targetBpm, 120);
+        expect(loaded.activeDurationSeconds, 15.5);
+        expect(loaded.samples.length, 1);
+        expect(loaded.samples.first.azMps2, 9.81);
+
+        await store.clearActiveSessionCache();
+        expect(await store.loadActiveSessionCache(), isNull);
+      } finally {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      }
+    });
   });
 }
 
