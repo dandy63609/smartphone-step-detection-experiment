@@ -37,6 +37,7 @@ dependencies:
   sensors_plus: ^7.1.1
   path_provider: ^2.1.6
   share_plus: ^13.3.1
+  shared_preferences: ^2.5.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -51,10 +52,12 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: assets/images/stradio-logo.png
+  image: assets/images/stradio-splash-icon.png
+  android_gravity: center
   android_12:
     color: "#FFFFFF"
-    image: assets/images/stradio-logo.png
+    image: assets/images/stradio-splash-icon.png
+    icon_background_color: "#FFFFFF"
   web: false
 
 # For information on the generic Dart part of this file, see the

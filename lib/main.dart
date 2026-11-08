@@ -5,13 +5,25 @@ import 'screens/stradio/active_run_screen.dart';
 import 'screens/stradio/sensor_labs_sheet.dart';
 import 'services/export_service.dart';
 import 'services/posthog_service.dart';
+import 'services/preferences_service.dart';
 import 'services/recording_repository.dart';
 import 'services/recording_service.dart';
 import 'theme/stradio_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const StradioApp());
+  await StradioPreferencesService.init();
+
+  final cachedApiKey = StradioPreferencesService.getPostHogApiKey();
+  final postHogService = PostHogTelemetryService(apiKey: cachedApiKey ?? '');
+  final savedLabSettings = StradioPreferencesService.loadLabSettings();
+
+  runApp(
+    StradioApp(
+      postHogService: postHogService,
+      initialLabSettings: savedLabSettings,
+    ),
+  );
 }
 
 /// Primary STRADIO application shell ("Stride + Audio: Movement becomes music").

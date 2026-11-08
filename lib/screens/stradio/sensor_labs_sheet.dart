@@ -6,6 +6,7 @@ import '../../main.dart';
 import '../../models/experiment_models.dart';
 import '../../services/export_service.dart';
 import '../../services/posthog_service.dart';
+import '../../services/preferences_service.dart';
 import '../../services/recording_repository.dart';
 import '../../services/recording_service.dart';
 import '../../theme/stradio_theme.dart';
@@ -177,6 +178,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
   Future<void> _applyPostHogKey() async {
     final key = _postHogKeyController.text.trim();
     await widget.postHogService.configure(apiKey: key);
+    await StradioPreferencesService.setPostHogApiKey(key);
     if (!mounted) return;
     setState(() {
       _statusIsError = false;
@@ -329,8 +331,9 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
     widget.onBeforeOpenLegacyExperiment?.call();
     final navigator = Navigator.of(context);
     navigator.pop();
-    // Yield a frame before pushing to ensure bottom sheet dismissal completes smoothly without UI hitch
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Yield a microtask frame so Navigator finishes closing the bottom sheet
+    Future<void>.delayed(Duration.zero, () {
+      if (!navigator.mounted) return;
       navigator.push(
         MaterialPageRoute<void>(
           builder: (_) => LegacyExperimentShell(
@@ -422,6 +425,12 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   decoration: BoxDecoration(
                     color: StradioColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(StradioRadii.card),
+                    border: Border.all(
+                      color: _settings.developerOverlayEnabled
+                          ? StradioColors.sonicCoral
+                          : StradioColors.borderSubtle,
+                      width: 1.0,
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -707,6 +716,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                   decoration: BoxDecoration(
                     color: StradioColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(StradioRadii.card),
+                    border: Border.all(color: StradioColors.borderSubtle, width: 1.0),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,7 +766,7 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                             onPressed: _applyPostHogKey,
                             style: OutlinedButton.styleFrom(
                               shape: const StadiumBorder(),
-                              side: BorderSide.none,
+                              side: const BorderSide(color: StradioColors.borderSubtle, width: 1.0),
                               backgroundColor: StradioColors.whiteSurface,
                               foregroundColor: StradioColors.midnight,
                             ),
@@ -848,9 +858,12 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                     minimumSize: const Size.fromHeight(50),
                     shape: const StadiumBorder(),
                     backgroundColor: StradioColors.whiteSurface,
-                    side: BorderSide.none,
+                    side: BorderSide(
+                      color: StradioColors.sonicCoral.withValues(alpha: 0.5),
+                      width: 1.0,
+                    ),
                     elevation: 1,
-                    shadowColor: Colors.black.withValues(alpha: 0.06),
+                    shadowColor: Colors.black.withValues(alpha: 0.04),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -861,9 +874,9 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                     minimumSize: const Size.fromHeight(50),
                     shape: const StadiumBorder(),
                     backgroundColor: StradioColors.whiteSurface,
-                    side: BorderSide.none,
+                    side: const BorderSide(color: StradioColors.borderSubtle, width: 1.0),
                     elevation: 1,
-                    shadowColor: Colors.black.withValues(alpha: 0.06),
+                    shadowColor: Colors.black.withValues(alpha: 0.04),
                     foregroundColor: StradioColors.midnight,
                   ),
                   icon: const Icon(Icons.grid_view_rounded, size: 18),
@@ -949,6 +962,10 @@ class _ProtocolChip extends StatelessWidget {
                 ? StradioColors.sonicCoral.withValues(alpha: 0.15)
                 : StradioColors.whiteSurface,
             borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? StradioColors.sonicCoral : StradioColors.borderSubtle,
+              width: 1.0,
+            ),
             boxShadow: selected ? null : StradioColors.cardShadow,
           ),
           child: Text(

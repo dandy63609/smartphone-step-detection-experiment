@@ -9,6 +9,7 @@ import '../../evaluation/run_metrics_calculator.dart';
 import '../../models/experiment_models.dart';
 import '../../services/export_service.dart';
 import '../../services/posthog_service.dart';
+import '../../services/preferences_service.dart';
 import '../../services/recording_repository.dart';
 import '../../services/recording_service.dart';
 import '../../theme/stradio_theme.dart';
@@ -507,7 +508,8 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         postHogService: _postHogService,
         onBeforeOpenLegacyExperiment: () {
           if (!mounted) return;
-          if (_streamState == _RunStreamState.running) {
+          if (_streamState == _RunStreamState.running || _recordingService.isRecording) {
+            unawaited(_recordingService.stop());
             setState(() {
               _streamState = _RunStreamState.paused;
             });
@@ -518,6 +520,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
           setState(() {
             _labSettings = updated;
           });
+          unawaited(StradioPreferencesService.saveLabSettings(updated));
         },
       ),
     );
@@ -649,6 +652,11 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                                     targetBpm: bpm,
                                   );
                                 });
+                                unawaited(
+                                  StradioPreferencesService.saveLabSettings(
+                                    _labSettings,
+                                  ),
+                                );
                               },
                             ),
                             const SizedBox(height: 18),
@@ -734,6 +742,11 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
                               targetBpm: bpm,
                             );
                           });
+                          unawaited(
+                            StradioPreferencesService.saveLabSettings(
+                              _labSettings,
+                            ),
+                          );
                         },
                         onTogglePauseResume: _togglePauseResume,
                         onFinishRun: _finishRun,

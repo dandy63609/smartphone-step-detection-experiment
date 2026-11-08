@@ -50,11 +50,14 @@ class StradioColors {
   /// Error / Alert Red (#EF4444).
   static const Color statusError = Color(0xFFEF4444);
 
+  /// Subtle border for interactive form inputs, chips, and outlined utility buttons (#E2E0D8).
+  static const Color borderSubtle = Color(0xFFE2E0D8);
+
   /// Legacy dark colors preserved for backward compatibility
   static const Color warmIvory = midnight;
   static const Color mutedIvory = secondaryNeutral;
   static const Color surfaceDark = whiteSurface;
-  static const Color borderDark = Colors.transparent;
+  static const Color borderDark = borderSubtle;
 
   /// Soft elevation shadow for borderless cards (eliminates AI-slop hairline borders).
   static const List<BoxShadow> cardShadow = [
@@ -263,11 +266,11 @@ class StradioTheme {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(StradioRadii.control),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: StradioColors.borderSubtle, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(StradioRadii.control),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: StradioColors.borderSubtle, width: 1.0),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(StradioRadii.control),
