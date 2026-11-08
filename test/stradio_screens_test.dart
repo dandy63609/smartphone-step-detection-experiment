@@ -7,7 +7,6 @@ import 'package:smartphone_step_detection_experiment/screens/dashboard_screen.da
 import 'package:smartphone_step_detection_experiment/services/posthog_service.dart';
 import 'package:smartphone_step_detection_experiment/services/recording_repository.dart';
 import 'package:smartphone_step_detection_experiment/services/recording_service.dart';
-import 'package:smartphone_step_detection_experiment/widgets/stradio_logo_widget.dart';
 
 class InMemoryRecordingStore implements RecordingStore {
   final List<SavedRecording> saved = [];
@@ -32,7 +31,7 @@ class InMemoryRecordingStore implements RecordingStore {
 
 void main() {
   testWidgets(
-    'STRADIO full 4-screen flow: Splash -> Active Run -> Sensor Labs -> Developer Overlay -> Post-Run Summary -> Legacy Experiment',
+    'STRADIO full 4-screen flow: Active Run -> Sensor Labs -> Developer Overlay -> Post-Run Summary -> Legacy Experiment',
     (WidgetTester tester) async {
       final store = InMemoryRecordingStore();
       final postHog = PostHogTelemetryService(
@@ -53,20 +52,11 @@ void main() {
           store: store,
           recordingService: recordingService,
           postHogService: postHog,
-          splashDuration: const Duration(milliseconds: 100),
         ),
       );
-
-      // 1. Verify Screen 1: Minimalist Splash Screen (logo only per user preference)
-      expect(find.byType(StradioLogoWidget), findsOneWidget);
-      expect(find.text('STRADIO'), findsNothing);
-      expect(find.byKey(const Key('splash_screen_tap_area')), findsOneWidget);
-
-      // Advance past splash screen into Screen 2: ActiveRunScreen
-      await tester.pump(const Duration(milliseconds: 150));
       await tester.pumpAndSettle();
 
-      // 2. Verify Screen 2: Active Run & Reactive Music Screen (defaults to step detection OFF/PAUSED)
+      // 1. Verify Active Run & Reactive Music Screen (launches directly, native splash handles pre-render)
       expect(find.text('PAUSED'), findsOneWidget);
       expect(find.byKey(const Key('status_indicator_dot')), findsOneWidget);
       expect(find.text('STEPS'), findsOneWidget);
@@ -234,11 +224,8 @@ void main() {
           store: store,
           recordingService: unavailableService,
           postHogService: postHog,
-          splashDuration: const Duration(milliseconds: 50),
         ),
       );
-      // Tap splash screen directly to enter ActiveRunScreen immediately
-      await tester.tap(find.byKey(const Key('splash_screen_tap_area')));
       await tester.pumpAndSettle();
 
       // Verify Sensor Standby / Error state banner and Simulate Stride (+1) action stays visible across repeated taps
@@ -339,10 +326,8 @@ void main() {
             store: store,
             recordingService: recordingService,
             postHogService: postHog,
-            splashDuration: const Duration(milliseconds: 50),
           ),
         );
-        await tester.pump(const Duration(milliseconds: 80));
         await tester.pumpAndSettle();
 
         expect(find.text('PAUSED'), findsOneWidget);

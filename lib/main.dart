@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'screens/dashboard_screen.dart';
+import 'screens/stradio/active_run_screen.dart';
 import 'screens/stradio/sensor_labs_sheet.dart';
-import 'screens/stradio/stradio_splash_screen.dart';
 import 'services/export_service.dart';
 import 'services/posthog_service.dart';
 import 'services/recording_repository.dart';
@@ -16,8 +16,9 @@ void main() {
 
 /// Primary STRADIO application shell ("Stride + Audio: Movement becomes music").
 ///
-/// Launches into [StradioSplashScreen] -> [ActiveRunScreen] with access to
-/// [SensorLabsSheet], [PostRunSummaryScreen], and the legacy [DashboardScreen].
+/// Native splash is handled via flutter_native_splash. Launches directly into
+/// [ActiveRunScreen] with access to [SensorLabsSheet], [PostRunSummaryScreen],
+/// and the legacy [DashboardScreen].
 class StradioApp extends StatelessWidget {
   const StradioApp({
     super.key,
@@ -25,7 +26,6 @@ class StradioApp extends StatelessWidget {
     this.recordingService,
     this.exportService,
     this.postHogService,
-    this.splashDuration = const Duration(milliseconds: 1400),
     this.initialLabSettings = const StradioLabSettings(),
   });
 
@@ -33,7 +33,6 @@ class StradioApp extends StatelessWidget {
   final RecordingService? recordingService;
   final ExportService? exportService;
   final PostHogTelemetryService? postHogService;
-  final Duration splashDuration;
   final StradioLabSettings initialLabSettings;
 
   @override
@@ -41,11 +40,10 @@ class StradioApp extends StatelessWidget {
     return MaterialApp(
       title: 'Stradio',
       debugShowCheckedModeBanner: false,
-      theme: StradioTheme.darkTheme,
+      theme: StradioTheme.lightTheme,
       darkTheme: StradioTheme.darkTheme,
-      themeMode: ThemeMode.dark,
-      home: StradioSplashScreen(
-        splashDuration: splashDuration,
+      themeMode: ThemeMode.light,
+      home: ActiveRunScreen(
         store: store,
         recordingService: recordingService,
         exportService: exportService,
