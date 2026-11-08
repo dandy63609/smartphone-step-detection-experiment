@@ -16,6 +16,7 @@ class StradioPreferencesService {
   static const _keyActivity = 'stradio_activity';
   static const _keyPhonePlacement = 'stradio_phone_placement';
   static const _keyPrimaryAlgorithm = 'stradio_primary_algorithm';
+  static const _keyDarkMode = 'stradio_dark_mode';
 
   static SharedPreferences? _prefs;
 
@@ -86,6 +87,18 @@ class StradioPreferencesService {
     final p = _prefs ?? await SharedPreferences.getInstance();
     _prefs = p;
     await p.setString(_keyPostHogApiKey, apiKey);
+  }
+
+  /// Returns true if Dark Mode (Deep Obsidian) is enabled.
+  static bool isDarkMode() {
+    return _prefs?.getBool(_keyDarkMode) ?? false;
+  }
+
+  /// Persists the selected theme mode preference.
+  static Future<void> setDarkMode(bool isDark) async {
+    final p = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = p;
+    await p.setBool(_keyDarkMode, isDark);
   }
 }
 
