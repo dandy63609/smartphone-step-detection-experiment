@@ -331,9 +331,28 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('PAUSED'), findsOneWidget);
+        expect(find.text('STRIDE GOAL'), findsOneWidget);
         expect(find.text('Finish Run'), findsOneWidget);
         expect(tester.takeException(), isNull);
       }
+
+      // Verify Warm Ivory Light -> Deep Obsidian Dark Mode toggle (Point 7.3) & Monogram Avatar
+      await tester.binding.setSurfaceSize(const Size(412, 892));
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          recordingService: recordingService,
+          postHogService: postHog,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('runner_monogram_avatar')), findsOneWidget);
+      expect(find.text('MC'), findsOneWidget);
+      expect(find.byKey(const Key('theme_mode_toggle_button')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('theme_mode_toggle_button')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
 
       await tester.binding.setSurfaceSize(null);
     },
