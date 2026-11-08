@@ -126,8 +126,6 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
     final palette = StradioPalette.of(context);
     final m = widget.metrics;
     final formattedSteps = formatStepCount(m.totalSteps);
-    final avgSpmText = '${m.averageCadenceSpm.round()} AVG SPM';
-    final distanceText = '${m.distanceKm.toStringAsFixed(2)} KM DISTANCE';
     final rhythmPercent = m.rhythmScorePercent.round();
     final benchmarkResults = evaluateRecordingAllFour(widget.recording);
     final errorPercent =
@@ -257,9 +255,10 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                               stepsLabel: '$formattedSteps STEPS',
                               targetSteps: widget.recording.config.targetSteps,
                               errorPercent: errorPercent,
-                              durationLabel: '${m.formattedDuration} DURATION',
-                              spmLabel: avgSpmText,
-                              distanceLabel: distanceText,
+                              durationLabel: m.formattedDuration,
+                              spmLabel: '${m.averageCadenceSpm.round()} SPM',
+                              distanceLabel:
+                                  '${m.distanceKm.toStringAsFixed(2)} km',
                               isTablet: isTablet,
                             ),
                             const SizedBox(height: 16),
@@ -462,7 +461,7 @@ class _MainStatHeroCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'TOTAL WORKOUT ACHIEVEMENTS',
+                  'SESSION HIGHLIGHTS',
                   overflow: TextOverflow.ellipsis,
                   style: StradioTypography.interLabel(
                     fontSize: 11,
@@ -527,24 +526,38 @@ class _MainStatHeroCard extends StatelessWidget {
           const SizedBox(height: 16),
           Divider(color: palette.textSecondary.withValues(alpha: 0.12), height: 1),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 20,
-            runSpacing: 14,
+          Row(
             children: [
-              _AchievementTile(
-                icon: Icons.timer_outlined,
-                value: durationLabel,
-                subtitle: 'Active Run Time',
+              Expanded(
+                child: _SummaryMetricColumn(
+                  icon: Icons.timer_outlined,
+                  value: durationLabel,
+                  label: 'Duration',
+                ),
               ),
-              _AchievementTile(
-                icon: Icons.speed_rounded,
-                value: spmLabel,
-                subtitle: 'Stride Cadence',
+              Container(
+                width: 1,
+                height: 36,
+                color: palette.textSecondary.withValues(alpha: 0.12),
               ),
-              _AchievementTile(
-                icon: Icons.route_outlined,
-                value: distanceLabel,
-                subtitle: 'Estimated Distance',
+              Expanded(
+                child: _SummaryMetricColumn(
+                  icon: Icons.speed_rounded,
+                  value: spmLabel,
+                  label: 'Avg Cadence',
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 36,
+                color: palette.textSecondary.withValues(alpha: 0.12),
+              ),
+              Expanded(
+                child: _SummaryMetricColumn(
+                  icon: Icons.route_outlined,
+                  value: distanceLabel,
+                  label: 'Distance',
+                ),
               ),
             ],
           ),
@@ -714,59 +727,56 @@ class _AlgorithmResultRow extends StatelessWidget {
   }
 }
 
-class _AchievementTile extends StatelessWidget {
-  const _AchievementTile({
+class _SummaryMetricColumn extends StatelessWidget {
+  const _SummaryMetricColumn({
     required this.icon,
     required this.value,
-    required this.subtitle,
+    required this.label,
   });
 
   final IconData icon;
   final String value;
-  final String subtitle;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final palette = StradioPalette.of(context);
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 132),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: palette.surfaceSubtle,
-              borderRadius: BorderRadius.circular(StradioRadii.control),
-            ),
-            child: Icon(icon, size: 18, color: palette.accentCoral),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: StradioTypography.soraHeading(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: palette.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: StradioTypography.interBody(
-                  fontSize: 12,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 14, color: palette.accentCoral),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: StradioTypography.interLabel(
+                  fontSize: 11,
                   color: palette.textSecondary,
+                  letterSpacing: 0.3,
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          style: StradioTypography.soraHeading(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: palette.textPrimary,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

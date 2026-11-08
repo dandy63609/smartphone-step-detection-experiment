@@ -621,79 +621,114 @@ class _SensorLabsSheetState extends State<SensorLabsSheet> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                      // 3 paired 2-column segmented rows for clean horizontal ergonomics
+                      // Row 1: Activity (Walking / Jogging)
+                      Row(
                         children: [
-                          _ProtocolChip(
-                            label: 'Walking',
-                            selected: _settings.activity == Activity.walking,
-                            onTap: () => _updateSettings(
-                              _settings.copyWith(
-                                activity: Activity.walking,
-                                targetBpm:
-                                    RunMetricsCalculator.defaultTargetBpm(
-                                      Activity.walking,
-                                    ),
+                          Expanded(
+                            child: _ProtocolChip(
+                              label: 'Walking',
+                              icon: Icons.directions_walk_rounded,
+                              selected: _settings.activity == Activity.walking,
+                              onTap: () => _updateSettings(
+                                _settings.copyWith(
+                                  activity: Activity.walking,
+                                  targetBpm:
+                                      RunMetricsCalculator.defaultTargetBpm(
+                                        Activity.walking,
+                                      ),
+                                ),
                               ),
                             ),
                           ),
-                          _ProtocolChip(
-                            label: 'Jogging',
-                            selected: _settings.activity == Activity.jogging,
-                            onTap: () => _updateSettings(
-                              _settings.copyWith(
-                                activity: Activity.jogging,
-                                targetBpm:
-                                    RunMetricsCalculator.defaultTargetBpm(
-                                      Activity.jogging,
-                                    ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _ProtocolChip(
+                              label: 'Jogging',
+                              icon: Icons.directions_run_rounded,
+                              selected: _settings.activity == Activity.jogging,
+                              onTap: () => _updateSettings(
+                                _settings.copyWith(
+                                  activity: Activity.jogging,
+                                  targetBpm:
+                                      RunMetricsCalculator.defaultTargetBpm(
+                                        Activity.jogging,
+                                      ),
+                                ),
                               ),
                             ),
                           ),
-                          _ProtocolChip(
-                            label: 'Hand',
-                            selected:
-                                _settings.phonePlacement == PhonePlacement.hand,
-                            onTap: () => _updateSettings(
-                              _settings.copyWith(
-                                phonePlacement: PhonePlacement.hand,
-                                placementDetail: 'Right hand',
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Row 2: Placement (Hand / Pocket)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ProtocolChip(
+                              label: 'Hand',
+                              icon: Icons.pan_tool_outlined,
+                              selected:
+                                  _settings.phonePlacement == PhonePlacement.hand,
+                              onTap: () => _updateSettings(
+                                _settings.copyWith(
+                                  phonePlacement: PhonePlacement.hand,
+                                  placementDetail: 'Right hand',
+                                ),
                               ),
                             ),
                           ),
-                          _ProtocolChip(
-                            label: 'Pocket',
-                            selected:
-                                _settings.phonePlacement ==
-                                PhonePlacement.pocket,
-                            onTap: () => _updateSettings(
-                              _settings.copyWith(
-                                phonePlacement: PhonePlacement.pocket,
-                                placementDetail: 'Front-right pocket',
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _ProtocolChip(
+                              label: 'Pocket',
+                              icon: Icons.smartphone_rounded,
+                              selected:
+                                  _settings.phonePlacement ==
+                                  PhonePlacement.pocket,
+                              onTap: () => _updateSettings(
+                                _settings.copyWith(
+                                  phonePlacement: PhonePlacement.pocket,
+                                  placementDetail: 'Front-right pocket',
+                                ),
                               ),
                             ),
                           ),
-                          _ProtocolChip(
-                            label: 'Midpoint (A1)',
-                            selected:
-                                _settings.primaryAlgorithm ==
-                                ThresholdAlgorithm.adaptiveMidpoint,
-                            onTap: () => _updateSettings(
-                              _settings.copyWith(
-                                primaryAlgorithm:
-                                    ThresholdAlgorithm.adaptiveMidpoint,
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Row 3: Algorithm (Midpoint A1 / Mean+SD B1)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ProtocolChip(
+                              label: 'Midpoint (A1)',
+                              icon: Icons.analytics_outlined,
+                              selected:
+                                  _settings.primaryAlgorithm ==
+                                  ThresholdAlgorithm.adaptiveMidpoint,
+                              onTap: () => _updateSettings(
+                                _settings.copyWith(
+                                  primaryAlgorithm:
+                                      ThresholdAlgorithm.adaptiveMidpoint,
+                                ),
                               ),
                             ),
                           ),
-                          _ProtocolChip(
-                            label: 'Mean+SD (B1)',
-                            selected:
-                                _settings.primaryAlgorithm ==
-                                ThresholdAlgorithm.meanStd,
-                            onTap: () => _updateSettings(
-                              _settings.copyWith(
-                                primaryAlgorithm: ThresholdAlgorithm.meanStd,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _ProtocolChip(
+                              label: 'Mean+SD (B1)',
+                              icon: Icons.show_chart_rounded,
+                              selected:
+                                  _settings.primaryAlgorithm ==
+                                  ThresholdAlgorithm.meanStd,
+                              onTap: () => _updateSettings(
+                                _settings.copyWith(
+                                  primaryAlgorithm: ThresholdAlgorithm.meanStd,
+                                ),
                               ),
                             ),
                           ),
@@ -957,11 +992,13 @@ class _DiagnosticStatItem extends StatelessWidget {
 class _ProtocolChip extends StatelessWidget {
   const _ProtocolChip({
     required this.label,
+    this.icon,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
+  final IconData? icon;
   final bool selected;
   final VoidCallback onTap;
 
@@ -978,7 +1015,7 @@ class _ProtocolChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(StradioRadii.pill),
         child: Container(
           constraints: const BoxConstraints(minHeight: 40, minWidth: 72),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected
@@ -987,14 +1024,31 @@ class _ProtocolChip extends StatelessWidget {
             borderRadius: BorderRadius.circular(StradioRadii.pill),
             boxShadow: selected ? null : palette.cardShadow,
           ),
-          child: Text(
-            label,
-            style: StradioTypography.interLabel(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? palette.accentCoral : palette.textPrimary,
-              letterSpacing: 0.2,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 16,
+                  color: selected ? palette.accentCoral : palette.textSecondary,
+                ),
+                const SizedBox(width: 6),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: StradioTypography.interLabel(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? palette.accentCoral : palette.textPrimary,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

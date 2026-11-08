@@ -61,20 +61,18 @@ void main() {
       expect(find.byKey(const Key('status_indicator_dot')), findsOneWidget);
       expect(find.text('STEPS'), findsOneWidget);
       expect(find.byKey(const Key('active_run_step_count')), findsOneWidget);
-      expect(find.text('Neon Stride : 165 BPM'), findsOneWidget);
+      expect(find.text('Neon Stride · Adaptive Stride'), findsOneWidget);
       expect(find.text('Finish Run'), findsOneWidget);
 
-      // Verify Milestone 1 additions: Center Hero Play Button in Standby & Segmented Utility Bar
-      expect(find.byKey(const Key('hero_center_play_button')), findsOneWidget);
+      // Verify Milestone 1 additions: Center Rhythm Core Emblem & Segmented Utility Bar
+      expect(find.byKey(const Key('hero_rhythm_core_emblem')), findsOneWidget);
       expect(find.byKey(const Key('utility_bpm_selector_button')), findsOneWidget);
       expect(find.text('A1 Midpoint'), findsOneWidget);
 
-      // Start step detection by tapping the Hero Center Play Button (Reference 2 behavior)
-      await tester.tap(find.byKey(const Key('hero_center_play_button')));
+      // Start step detection by tapping bottom deck Play button (thumb zone)
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
       await tester.pump();
       expect(find.text('RUNNING'), findsOneWidget);
-      // While running, center button fades away so the multi-layer waveform animates freely
-      expect(find.byKey(const Key('hero_center_play_button')), findsNothing);
 
       // 3. Open Screen 4: Sensor Labs & Diagnostics Bottom Sheet
       await tester.tap(find.byKey(const Key('open_sensor_labs_button')));
@@ -251,7 +249,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('118 BPM (Brisk Walk)'));
       await tester.pumpAndSettle();
-      expect(find.text('Neon Stride : 118 BPM'), findsOneWidget);
+      expect(find.text('Neon Stride · Adaptive Stride'), findsOneWidget);
 
       // Open Sensor Labs and exercise benchmark config, Mean+SD (B1) chip, PostHog sync, and empty CSV export
       await tester.tap(find.byKey(const Key('open_sensor_labs_button')));

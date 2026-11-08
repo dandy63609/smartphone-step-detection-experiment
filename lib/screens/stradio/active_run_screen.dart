@@ -976,7 +976,7 @@ class _EditorialRunHeader extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      'Neon Stride : $targetBpm BPM',
+                      'Neon Stride · Adaptive Stride',
                       key: const Key('soundscape_title_text'),
                       overflow: TextOverflow.ellipsis,
                       style: StradioTypography.interLabel(
@@ -1229,44 +1229,40 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Center Play Button only in Standby/Paused (Reference 2 preview state).
-                  // Disappears during active run so controls remain strictly in the bottom thumb zone!
-                  if (!isRunning && onCenterPlayTap != null)
-                    Semantics(
-                      button: true,
-                      label: 'Start Workout and Reactive Beats',
-                      child: Material(
-                        color: Colors.transparent,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          key: const Key('hero_center_play_button'),
-                          onTap: onCenterPlayTap,
-                          customBorder: const CircleBorder(),
-                          child: Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: StradioColors.sonicCoral,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: StradioColors.sonicCoral.withValues(
-                                    alpha: 0.36,
-                                  ),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              size: 32,
-                              color: Colors.white,
-                            ),
+                  // Center Rhythm Core Emblem (Non-button: pulses with tempo & foot-strike impact)
+                  Semantics(
+                    label: 'Rhythm Core Status Indicator',
+                    child: Container(
+                      key: const Key('hero_rhythm_core_emblem'),
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: palette.surface.withValues(alpha: 0.92),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (stepFlashActive
+                                    ? palette.accentCoral
+                                    : palette.accentViolet)
+                                .withValues(alpha: stepFlashActive ? 0.38 : 0.22),
+                            blurRadius: stepFlashActive ? 20 : 14,
+                            offset: const Offset(0, 3),
                           ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.graphic_eq_rounded,
+                          size: 24,
+                          color: stepFlashActive
+                              ? palette.accentCoral
+                              : (isRunning
+                                  ? palette.accentViolet
+                                  : palette.textSecondary),
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

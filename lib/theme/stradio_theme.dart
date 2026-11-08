@@ -466,13 +466,13 @@ class StradioTheme {
           if (states.contains(WidgetState.selected)) {
             return Colors.white;
           }
-          return StradioColors.secondaryNeutral;
+          return Colors.white;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return StradioColors.sonicCoral;
           }
-          return StradioColors.surfaceSubtle;
+          return const Color(0xFFD6D4CC); // High-contrast visible track when OFF
         }),
         trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
@@ -655,7 +655,7 @@ class StradioTheme {
           if (states.contains(WidgetState.selected)) {
             return StradioColors.sonicCoral;
           }
-          return StradioColors.charcoalSubtle;
+          return const Color(0xFF383848); // High-contrast visible track in dark mode when OFF
         }),
         trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
