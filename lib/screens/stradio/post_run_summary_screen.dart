@@ -123,16 +123,18 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StradioPalette.of(context);
     final m = widget.metrics;
     final formattedSteps = formatStepCount(m.totalSteps);
     final avgSpmText = '${m.averageCadenceSpm.round()} AVG SPM';
     final distanceText = '${m.distanceKm.toStringAsFixed(2)} KM DISTANCE';
     final rhythmPercent = m.rhythmScorePercent.round();
     final benchmarkResults = evaluateRecordingAllFour(widget.recording);
-    final errorPercent = (m.totalSteps - widget.recording.config.targetSteps).toDouble();
+    final errorPercent =
+        (m.totalSteps - widget.recording.config.targetSteps).toDouble();
 
     return Scaffold(
-      backgroundColor: StradioColors.ivoryCanvas,
+      backgroundColor: palette.canvas,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -164,14 +166,12 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                               onPressed: () => Navigator.of(context).pop(false),
                               tooltip: 'Discard / Back to Run',
                               style: IconButton.styleFrom(
-                                backgroundColor: StradioColors.whiteSurface,
-                                elevation: 1,
-                                shadowColor: Colors.black.withValues(alpha: 0.08),
+                                backgroundColor: palette.surface,
                                 shape: const CircleBorder(),
                               ),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.arrow_back_rounded,
-                                color: StradioColors.midnight,
+                                color: palette.textPrimary,
                                 size: 20,
                               ),
                             ),
@@ -180,7 +180,7 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                             'POST-RUN INSIGHTS',
                             style: StradioTypography.interLabel(
                               fontSize: 11,
-                              color: StradioColors.secondaryNeutral,
+                              color: palette.textSecondary,
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -192,14 +192,12 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                               onPressed: _shareWorkout,
                               tooltip: 'Share Workout',
                               style: IconButton.styleFrom(
-                                backgroundColor: StradioColors.whiteSurface,
-                                elevation: 1,
-                                shadowColor: Colors.black.withValues(alpha: 0.08),
+                                backgroundColor: palette.surface,
                                 shape: const CircleBorder(),
                               ),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.share_outlined,
-                                color: StradioColors.sonicCoral,
+                                color: palette.accentCoral,
                                 size: 20,
                               ),
                             ),
@@ -235,6 +233,7 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                         style: StradioTypography.soraHeading(
                                           fontSize: isTablet ? 22 : 19,
                                           fontWeight: FontWeight.w800,
+                                          color: palette.textPrimary,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -242,7 +241,7 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                         'Session ${widget.recording.recordingId} (${widget.recording.config.activity.value.toUpperCase()} / ${widget.recording.config.phonePlacement.value.toUpperCase()})',
                                         style: StradioTypography.interLabel(
                                           fontSize: 12,
-                                          color: StradioColors.mutedIvory,
+                                          color: palette.textSecondary,
                                           letterSpacing: 0.4,
                                         ),
                                       ),
@@ -315,17 +314,17 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                       ? StradioColors.statusError.withValues(
                                           alpha: 0.15,
                                         )
-                                      : StradioColors.whiteSurface,
+                                      : palette.surface,
                                   borderRadius: BorderRadius.circular(
-                                    StradioRadii.control,
+                                    StradioRadii.squircle,
                                   ),
-                                  boxShadow: StradioColors.cardShadow,
+                                  boxShadow: palette.cardShadow,
                                 ),
                                 child: Text(
                                   _feedbackMessage!,
                                   style: StradioTypography.interBody(
                                     fontSize: 13,
-                                    color: StradioColors.midnight,
+                                    color: palette.textPrimary,
                                   ),
                                 ),
                               ),
@@ -343,8 +342,8 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                         horizontalPad,
                         16,
                       ),
-                      decoration: const BoxDecoration(
-                        color: StradioColors.ivoryCanvas,
+                      decoration: BoxDecoration(
+                        color: palette.canvas,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -354,7 +353,9 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                           DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: StradioColors.heroGradient,
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius: BorderRadius.circular(
+                                StradioRadii.pill,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: StradioColors.sonicCoral.withValues(
@@ -393,19 +394,17 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                             onPressed: _shareWorkout,
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size.fromHeight(48),
-                              backgroundColor: StradioColors.whiteSurface,
+                              backgroundColor: palette.surface,
                               shape: const StadiumBorder(),
                               side: BorderSide.none,
-                              elevation: 1,
-                              shadowColor: Colors.black.withValues(alpha: 0.06),
-                              foregroundColor: StradioColors.midnight,
+                              foregroundColor: palette.textPrimary,
                             ),
                             icon: const Icon(Icons.share_outlined, size: 18),
                             label: Text(
                               'Share Workout',
                               style: StradioTypography.interLabel(
                                 fontSize: 14,
-                                color: StradioColors.midnight,
+                                color: palette.textPrimary,
                               ),
                             ),
                           ),
@@ -444,15 +443,16 @@ class _MainStatHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StradioPalette.of(context);
     final absError = errorPercent.abs();
     final signPrefix = errorPercent > 0 ? '+' : (errorPercent < 0 ? '-' : '');
 
     return Container(
       padding: EdgeInsets.all(isTablet ? 24 : 20),
       decoration: BoxDecoration(
-        color: StradioColors.whiteSurface,
+        color: palette.surface,
         borderRadius: BorderRadius.circular(StradioRadii.hero),
-        boxShadow: StradioColors.cardShadow,
+        boxShadow: palette.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,25 +460,29 @@ class _MainStatHeroCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'TOTAL WORKOUT ACHIEVEMENTS',
-                style: StradioTypography.interLabel(
-                  fontSize: 11,
-                  color: StradioColors.secondaryNeutral,
-                  letterSpacing: 1.0,
+              Expanded(
+                child: Text(
+                  'TOTAL WORKOUT ACHIEVEMENTS',
+                  overflow: TextOverflow.ellipsis,
+                  style: StradioTypography.interLabel(
+                    fontSize: 11,
+                    color: palette.textSecondary,
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: StradioColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(999),
+                  color: palette.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(StradioRadii.pill),
                 ),
                 child: Text(
                   '100 Steps Benchmark',
                   style: StradioTypography.interLabel(
                     fontSize: 10,
-                    color: StradioColors.rhythmViolet,
+                    color: palette.accentViolet,
                   ),
                 ),
               ),
@@ -496,7 +500,7 @@ class _MainStatHeroCard extends StatelessWidget {
                 style: StradioTypography.soraMetric(
                   fontSize: isTablet ? 42 : 34,
                   fontWeight: FontWeight.w800,
-                  color: StradioColors.midnight,
+                  color: palette.textPrimary,
                 ),
               ),
               Container(
@@ -505,7 +509,7 @@ class _MainStatHeroCard extends StatelessWidget {
                   color: absError <= 2.0
                       ? StradioColors.statusLive.withValues(alpha: 0.14)
                       : StradioColors.sonicCoral.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(StradioRadii.pill),
                 ),
                 child: Text(
                   'Target: $targetSteps ($signPrefix${absError.toStringAsFixed(1)}% err)',
@@ -521,7 +525,7 @@ class _MainStatHeroCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Divider(color: StradioColors.secondaryNeutral.withValues(alpha: 0.12), height: 1),
+          Divider(color: palette.textSecondary.withValues(alpha: 0.12), height: 1),
           const SizedBox(height: 16),
           Wrap(
             spacing: 20,
@@ -561,12 +565,14 @@ class _AlgorithmBenchmarkScoreboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StradioPalette.of(context);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: StradioColors.whiteSurface,
-        borderRadius: BorderRadius.circular(StradioRadii.card),
-        boxShadow: StradioColors.cardShadow,
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(StradioRadii.squircle),
+        boxShadow: palette.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,7 +585,7 @@ class _AlgorithmBenchmarkScoreboardCard extends StatelessWidget {
                   '4-ALGORITHM EVALUATION BENCHMARK',
                   style: StradioTypography.interLabel(
                     fontSize: 11,
-                    color: StradioColors.secondaryNeutral,
+                    color: palette.textSecondary,
                     letterSpacing: 1.0,
                   ),
                 ),
@@ -587,14 +593,14 @@ class _AlgorithmBenchmarkScoreboardCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: StradioColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(999),
+                  color: palette.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(StradioRadii.pill),
                 ),
                 child: Text(
                   'Target: $targetSteps Steps',
                   style: StradioTypography.interLabel(
                     fontSize: 10,
-                    color: StradioColors.rhythmViolet,
+                    color: palette.accentViolet,
                   ),
                 ),
               ),
@@ -605,7 +611,7 @@ class _AlgorithmBenchmarkScoreboardCard extends StatelessWidget {
             'Compares detected step counts against the physical 100-step ground truth across all 4 algorithmic pipelines.',
             style: StradioTypography.interBody(
               fontSize: 12,
-              color: StradioColors.secondaryNeutral,
+              color: palette.textSecondary,
             ),
           ),
           const SizedBox(height: 14),
@@ -623,6 +629,7 @@ class _AlgorithmResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StradioPalette.of(context);
     final (badgeColor, badgeTextColor) = switch (result.status) {
       DetectionStatus.accurate => (
         StradioColors.statusLive.withValues(alpha: 0.14),
@@ -633,8 +640,8 @@ class _AlgorithmResultRow extends StatelessWidget {
         StradioColors.sonicCoral,
       ),
       DetectionStatus.undercounting => (
-        StradioColors.rhythmViolet.withValues(alpha: 0.14),
-        StradioColors.rhythmViolet,
+        palette.accentViolet.withValues(alpha: 0.14),
+        palette.accentViolet,
       ),
     };
 
@@ -642,7 +649,7 @@ class _AlgorithmResultRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: StradioColors.surfaceSubtle,
+        color: palette.surfaceSubtle,
         borderRadius: BorderRadius.circular(StradioRadii.control),
       ),
       child: Row(
@@ -650,16 +657,16 @@ class _AlgorithmResultRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: StradioColors.whiteSurface,
-              borderRadius: BorderRadius.circular(6),
-              boxShadow: StradioColors.cardShadow,
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(StradioRadii.tag),
+              boxShadow: palette.cardShadow,
             ),
             child: Text(
               result.variantCode,
               style: StradioTypography.soraHeading(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: StradioColors.midnight,
+                color: palette.textPrimary,
               ),
             ),
           ),
@@ -673,14 +680,14 @@ class _AlgorithmResultRow extends StatelessWidget {
                   style: StradioTypography.interBody(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: StradioColors.midnight,
+                    color: palette.textPrimary,
                   ),
                 ),
                 Text(
                   '${result.predictedSteps} steps (${result.marginOfErrorPercent.toStringAsFixed(1)}% error)',
                   style: StradioTypography.interLabel(
                     fontSize: 11,
-                    color: StradioColors.secondaryNeutral,
+                    color: palette.textSecondary,
                   ),
                 ),
               ],
@@ -720,6 +727,8 @@ class _AchievementTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StradioPalette.of(context);
+
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 132),
       child: Row(
@@ -729,10 +738,10 @@ class _AchievementTile extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: StradioColors.surfaceSubtle,
+              color: palette.surfaceSubtle,
               borderRadius: BorderRadius.circular(StradioRadii.control),
             ),
-            child: Icon(icon, size: 18, color: StradioColors.sonicCoral),
+            child: Icon(icon, size: 18, color: palette.accentCoral),
           ),
           const SizedBox(width: 10),
           Column(
@@ -743,7 +752,7 @@ class _AchievementTile extends StatelessWidget {
                 style: StradioTypography.soraHeading(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: StradioColors.midnight,
+                  color: palette.textPrimary,
                 ),
               ),
               const SizedBox(height: 2),
@@ -751,7 +760,7 @@ class _AchievementTile extends StatelessWidget {
                 subtitle,
                 style: StradioTypography.interBody(
                   fontSize: 12,
-                  color: StradioColors.secondaryNeutral,
+                  color: palette.textSecondary,
                 ),
               ),
             ],
@@ -775,14 +784,15 @@ class _StradioSignatureRhythmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StradioPalette.of(context);
     final hasSteps = actualSpm > 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: StradioColors.whiteSurface,
-        borderRadius: BorderRadius.circular(StradioRadii.card),
-        boxShadow: StradioColors.cardShadow,
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(StradioRadii.squircle),
+        boxShadow: palette.cardShadow,
       ),
       child: Row(
         children: [
@@ -801,6 +811,7 @@ class _StradioSignatureRhythmCard extends StatelessWidget {
                     style: StradioTypography.soraMetric(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
+                      color: palette.textPrimary,
                     ),
                   ),
                 ),
@@ -816,7 +827,7 @@ class _StradioSignatureRhythmCard extends StatelessWidget {
                   'STRADIO SIGNATURE',
                   style: StradioTypography.interLabel(
                     fontSize: 11,
-                    color: StradioColors.rhythmViolet,
+                    color: palette.accentViolet,
                     letterSpacing: 1.0,
                   ),
                 ),
@@ -827,6 +838,7 @@ class _StradioSignatureRhythmCard extends StatelessWidget {
                   style: StradioTypography.soraHeading(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
+                    color: palette.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -836,7 +848,7 @@ class _StradioSignatureRhythmCard extends StatelessWidget {
                       : 'No steps recorded in this session. Walk or jog during a run to measure your rhythm sync.',
                   style: StradioTypography.interBody(
                     fontSize: 13,
-                    color: StradioColors.mutedIvory,
+                    color: palette.textSecondary,
                   ),
                 ),
               ],
@@ -908,14 +920,15 @@ class _CadenceConsistencyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StradioPalette.of(context);
     final hasChartData = bucketsSpm.any((v) => v > 0);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: StradioColors.whiteSurface,
-        borderRadius: BorderRadius.circular(StradioRadii.card),
-        boxShadow: StradioColors.cardShadow,
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(StradioRadii.squircle),
+        boxShadow: palette.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -928,7 +941,7 @@ class _CadenceConsistencyCard extends StatelessWidget {
                   style: StradioTypography.soraHeading(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: StradioColors.midnight,
+                    color: palette.textPrimary,
                   ),
                 ),
               ),
@@ -936,7 +949,7 @@ class _CadenceConsistencyCard extends StatelessWidget {
                 'Target $targetBpm BPM',
                 style: StradioTypography.interLabel(
                   fontSize: 12,
-                  color: StradioColors.rhythmViolet,
+                  color: palette.accentViolet,
                 ),
               ),
             ],
@@ -946,7 +959,7 @@ class _CadenceConsistencyCard extends StatelessWidget {
             'Measures how steady your stride cadence remained from start to finish.',
             style: StradioTypography.interBody(
               fontSize: 12,
-              color: StradioColors.secondaryNeutral,
+              color: palette.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -956,7 +969,7 @@ class _CadenceConsistencyCard extends StatelessWidget {
               alignment: Alignment.center,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: StradioColors.surfaceSubtle,
+                color: palette.surfaceSubtle,
                 borderRadius: BorderRadius.circular(StradioRadii.control),
               ),
               child: Text(
@@ -964,7 +977,7 @@ class _CadenceConsistencyCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: StradioTypography.interBody(
                   fontSize: 12,
-                  color: StradioColors.secondaryNeutral,
+                  color: palette.textSecondary,
                 ),
               ),
             )

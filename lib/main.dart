@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'screens/dashboard_screen.dart';
@@ -17,11 +19,13 @@ Future<void> main() async {
   final cachedApiKey = StradioPreferencesService.getPostHogApiKey();
   final postHogService = PostHogTelemetryService(apiKey: cachedApiKey ?? '');
   final savedLabSettings = StradioPreferencesService.loadLabSettings();
+  final initialDark = StradioPreferencesService.isDarkMode();
 
   runApp(
     StradioApp(
       postHogService: postHogService,
       initialLabSettings: savedLabSettings,
+      initialDarkMode: initialDark,
     ),
   );
 }
@@ -30,8 +34,9 @@ Future<void> main() async {
 ///
 /// Native splash is handled via flutter_native_splash. Launches directly into
 /// [ActiveRunScreen] with access to [SensorLabsSheet], [PostRunSummaryScreen],
-/// and the legacy [DashboardScreen].
-class StradioApp extends StatelessWidget {
+/// and the legacy [DashboardScreen]. Supports flexible Warm Ivory Light Mode
+/// and Deep Obsidian Dark Mode.
+class StradioApp extends StatefulWidget {
   const StradioApp({
     super.key,
     this.store,
@@ -39,6 +44,7 @@ class StradioApp extends StatelessWidget {
     this.exportService,
     this.postHogService,
     this.initialLabSettings = const StradioLabSettings(),
+    this.initialDarkMode = false,
   });
 
   final RecordingStore? store;
@@ -46,6 +52,27 @@ class StradioApp extends StatelessWidget {
   final ExportService? exportService;
   final PostHogTelemetryService? postHogService;
   final StradioLabSettings initialLabSettings;
+  final bool initialDarkMode;
+
+  @override
+  State<StradioApp> createState() => _StradioAppState();
+}
+
+class _StradioAppState extends State<StradioApp> {
+  late bool _isDarkMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _isDarkMode = widget.initialDarkMode;
+  }
+
+  void _toggleThemeMode() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+    unawaited(StradioPreferencesService.setDarkMode(_isDarkMode));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,13 +81,14 @@ class StradioApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: StradioTheme.lightTheme,
       darkTheme: StradioTheme.darkTheme,
-      themeMode: ThemeMode.light,
+      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: ActiveRunScreen(
-        store: store,
-        recordingService: recordingService,
-        exportService: exportService,
-        postHogService: postHogService,
-        initialLabSettings: initialLabSettings,
+        store: widget.store,
+        recordingService: widget.recordingService,
+        exportService: widget.exportService,
+        postHogService: widget.postHogService,
+        initialLabSettings: widget.initialLabSettings,
+        onToggleThemeMode: _toggleThemeMode,
       ),
     );
   }
