@@ -48,5 +48,11 @@ app.*.map.json
 .widget_preview/
 
 # Agent Skills
+_bmad/
+_bmad-output/
 .agents/
+.agent/
 skills-lock.json
+
+# Fallow
+.fallow/
