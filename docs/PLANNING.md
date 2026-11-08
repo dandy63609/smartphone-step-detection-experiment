@@ -189,3 +189,112 @@ Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh *
 2. **Deterministic Offline Replay:** Penyimpanan sampel sensor mentah tetap berformat `SensorSample` murni (X, Y, Z, timestamp) sehingga algoritma dapat di-replay secara *offline* untuk pembuktian ilmiah.
 3. **Asynchronous Non-Blocking Pipeline:** Seluruh pemrosesan dataset besar berjalan di thread asinkron agar perangkat smartphone tidak mengalami lag atau *screen freeze*.
 4. **Privacy & Offline First:** Penyimpanan data bersifat lokal dan offline-first. Pengiriman telemetri ke PostHog Cloud hanya berjalan saat koneksi internet aktif tanpa menghambat antarmuka pengguna.
+
+---
+
+## 7. Cetak Biru Visual ASCII & Sistem Desain Baru (Hasil Review UX Sally & Anti-Slop)
+
+Bagian ini memuat visualisasi tata letak ASCII baru untuk **Layar Utama (`ActiveRunScreen`)**, hierarki bentuk/sudut lengkung (*shape & border system*), serta **Komparasi Tema Light/Dark**. Seluruh rancangan disusun bebas dari *AI slop* dan mengadopsi 100% karakter produk premium dari **Referensi 1** dan **Referensi 2**.
+
+### 7.1 Visualisasi ASCII: Zero-Scroll "Unified Stride Deck"
+
+Desain ini mengatasi 4 cacat UX pada draf sebelumnya: mengeliminasi tombol ganda (*no dual play buttons*), menjamin **Zero-Scroll** (pas dalam 1 viewport ponsel saat berlari), membuang istilah kaku laboratorium (*"Physical Steps"* diganti *"Session Goal"*), serta menempatkan seluruh kontrol vital di **Thumb Zone** bawah.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ (👤) Mark C.  [● ACTIVE]              [ ☀/☾ ] [ ⚗ Labs ]    │
+├─────────────────────────────────────────────────────────────┤
+│ Find Your Stride                                            │
+│ Neon Stride · 165 BPM ⚡                                     │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │  AUDIO-STRIDE WAVEFORM                                  │ │
+│ │                                                         │ │
+│ │   || | |||| ||| ||||||| ||||||| ||| |||| | ||           │ │
+│ │   || | |||| ||| ||||||| ||||||| ||| |||| | ||           │ │
+│ │   (Equalizer bar vertikal berirama reaktif langkah)     │ │
+│ │                                                         │ │
+│ │  Cadence Sync: Optimal (162 SPM)        ● Live Reactive │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │  STRIDE GOAL                              84 / 100      │ │
+│ │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━░░░░░  84%        │ │
+│ │                                                         │ │
+│ │       084                   162             04:18       │ │
+│ │      STEPS                  SPM             TIME        │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │   ╭─────────╮                                           │ │
+│ │   │ ⏸ PAUSE │        [     FINISH WORKOUT     ]        │ │
+│ │   ╰─────────╯                                           │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 7.2 Spesifikasi Bentuk: 100% Borderless & Corner Radius Hierarchy
+
+Berdasarkan analisis bedah visual terhadap **Referensi 1** dan **Referensi 2**, Stradio menolak penggunaan border garis abu-abu 1px kaku khas AI slop. Seluruh pemisahan bidang kartu dilakukan menggunakan **Tonal Contrast** dan **Diffused Ambient Shadow**.
+
+#### 1. Aturan Borderless & Elevasi Lembut
+* **Border:** `BorderSide.none` pada seluruh kartu dan modal.
+* **Separasi Bidang:** Diciptakan melalui kontras alas Warm Ivory (`#F7F6F2`) dengan permukaan kartu Pure White (`#FFFFFF`), dipertegas oleh bayangan difus 2-lapis:
+  ```dart
+  static const List<BoxShadow> cardShadow = [
+    BoxShadow(
+      color: Color(0x0A000000), // 4% black ambient
+      blurRadius: 24,
+      offset: Offset(0, 8),
+      spreadRadius: 0,
+    ),
+    BoxShadow(
+      color: Color(0x05000000), // 2% black contact
+      blurRadius: 6,
+      offset: Offset(0, 2),
+      spreadRadius: 0,
+    ),
+  ];
+  ```
+
+#### 2. Hierarki Sudut Lengkung (Deep Organic Squircle)
+
+| Level | Token | Nilai | Elemen UI | Alasan Desain (Ref 1 & 2) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Level 1** | `StradioRadii.hero` | **28.0 px** | Waveform Deck, Modal Bottom Sheet, Cover Art | Memberikan siluet batu kerikil halus (*smooth pebble*) yang sangat modern dan ramah mata ala Ref 2. |
+| **Level 2** | `StradioRadii.squircle` | **20.0 px** | Stride Goal Deck, Quick Action Tiles | Bentuk squircle proporsional (mirip launchpad MPC audio) yang tactile dan nyaman saat dipandang. |
+| **Level 3** | `StradioRadii.card` | **16.0 px** | Panel diagnostik internal, kartu riwayat | Radius standar fungsional untuk kartu anak (*nested containers*). |
+| **Level 4** | `StradioRadii.pill` | **999.0 px** | Tombol CTA (Finish), Status Badge, Floating Nav | Bentuk kapsul penuh (*stadium*) untuk seluruh elemen yang bisa disentuh jempol, memberi kontras tegas terhadap kartu squircle. |
+
+---
+
+### 7.3 Komparasi Palet: Warm Organic Dual Theme
+
+```
+┌───────────────────────────────────────┬───────────────────────────────────────┐
+│ LIGHT THEME (Warm Ivory - Ref 1 & 2)  │ DARK THEME (Deep Obsidian - Night Run)│
+├───────────────────────────────────────┼───────────────────────────────────────┤
+│ • Canvas: Warm Ivory (`#F7F6F2`)      │ • Canvas: Deep Obsidian (`#121217`)   │
+│ • Surfaces: Pure White (`#FFFFFF`)    │ • Surfaces: Charcoal Card (`#1E1E26`) │
+│ • Typography: Midnight (`#191923`)    │ • Typography: Warm Ivory (`#F5F0E8`)  │
+│ • Secondary: Muted Slate (`#666680`)  │ • Secondary: Soft Silver (`#9E9EB2`)  │
+│ • Accent 1: Sonic Coral (`#FF765F`)   │ • Accent 1: Sonic Coral (`#FF765F`)   │
+│ • Accent 2: Rhythm Violet (`#8B72DE`) │ • Accent 2: Rhythm Violet (`#A995DB`) │
+│ • Elevation: Soft Warm Shadows        │ • Elevation: Tonal Surface Separation │
+│   (100% Borderless, tanpa garis 1px)  │   (Kontras lembut, tanpa glow norak)  │
+└───────────────────────────────────────┴───────────────────────────────────────┘
+```
+
+---
+
+### 7.4 Pemetaan Token Baru ke `lib/theme/stradio_theme.dart`
+
+Untuk mendukung implementasi di kode Flutter, token berikut akan diperbarui:
+
+1. **`StradioRadii`:** Menambahkan `hero = 28.0`, `squircle = 20.0`, dan `pill = 999.0`.
+2. **`StradioColors`:** Menambahkan token Dark Theme (`obsidianCanvas = Color(0xFF121217)`, `charcoalSurface = Color(0xFF1E1E26)`).
+3. **`StradioTheme.darkTheme`:** Mengimplementasikan tema gelap organik nyata alih-alih sekadar alias `lightTheme`.
+4. **`cardTheme`:** Mengunci `side: BorderSide.none` dan elevasi 0 dengan `StradioColors.cardShadow`.
+
