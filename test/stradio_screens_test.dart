@@ -6,6 +6,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:smartphone_step_detection_experiment/main.dart';
 import 'package:smartphone_step_detection_experiment/models/experiment_models.dart';
 import 'package:smartphone_step_detection_experiment/screens/dashboard_screen.dart';
+import 'package:smartphone_step_detection_experiment/services/foreground_notification_service.dart';
 import 'package:smartphone_step_detection_experiment/services/posthog_service.dart';
 import 'package:smartphone_step_detection_experiment/services/recording_repository.dart';
 import 'package:smartphone_step_detection_experiment/services/recording_service.dart';
@@ -658,6 +659,114 @@ void main() {
       expect(store.activeCache, isNull);
       expect(find.text('Unfinished Run Detected'), findsNothing);
       expect(find.text('PAUSED'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Sprint 4: Foreground service and lockscreen notification start on run, update on pause, and stop on finish',
+    (tester) async {
+      final store = InMemoryRecordingStore();
+      final postHog = PostHogTelemetryService(
+        apiKey: 'phc_test_stradio',
+        transport: (uri, payload) async => 200,
+      );
+      final recordingService = RecordingService(
+        source: (_) => Stream.value(
+          AccelerometerEvent(0.1, 0.2, 9.81, DateTime.now()),
+        ),
+        userSource: (_) => Stream.value(
+          UserAccelerometerEvent(0.0, 0.0, 0.0, DateTime.now()),
+        ),
+      );
+      final foregroundService = NoopForegroundNotificationService();
+
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          recordingService: recordingService,
+          postHogService: postHog,
+          foregroundNotificationService: foregroundService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Before start, service is not active
+      expect(foregroundService.isServiceActive, isFalse);
+
+      // 1. Start run -> foreground service starts
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+      expect(foregroundService.isServiceActive, isTrue);
+      expect(foregroundService.lastIsRunning, isTrue);
+
+      // 2. Pause run -> foreground service updates with isRunning = false
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('PAUSED'), findsOneWidget);
+      expect(foregroundService.isServiceActive, isTrue);
+      expect(foregroundService.lastIsRunning, isFalse);
+
+      // 3. Finish run -> foreground service stops
+      await tester.tap(find.byKey(const Key('finish_run_button')));
+      await tester.pumpAndSettle();
+      expect(foregroundService.isServiceActive, isFalse);
+    },
+  );
+
+  testWidgets(
+    'Sprint 4: Interactive notification buttons (pause_resume and finish) remotely control active run session',
+    (tester) async {
+      final store = InMemoryRecordingStore();
+      final postHog = PostHogTelemetryService(
+        apiKey: 'phc_test_stradio',
+        transport: (uri, payload) async => 200,
+      );
+      final recordingService = RecordingService(
+        source: (_) => Stream.value(
+          AccelerometerEvent(0.1, 0.2, 9.81, DateTime.now()),
+        ),
+        userSource: (_) => Stream.value(
+          UserAccelerometerEvent(0.0, 0.0, 0.0, DateTime.now()),
+        ),
+      );
+      final foregroundService = NoopForegroundNotificationService();
+
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          recordingService: recordingService,
+          postHogService: postHog,
+          foregroundNotificationService: foregroundService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Start run via in-app button
+      await tester.tap(find.byKey(const Key('pause_resume_run_button')));
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+
+      // 1. Simulate user clicking 'pause_resume' action button on lockscreen notification
+      foregroundService.simulateNotificationAction('pause_resume');
+      await tester.pump();
+      expect(find.text('PAUSED'), findsOneWidget);
+      expect(foregroundService.lastIsRunning, isFalse);
+
+      // 2. Simulate user clicking 'pause_resume' action button again on lockscreen notification
+      foregroundService.simulateNotificationAction('pause_resume');
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+      expect(foregroundService.lastIsRunning, isTrue);
+
+      // 3. Simulate user clicking 'finish' action button on lockscreen notification
+      foregroundService.simulateNotificationAction('finish');
+      await tester.pumpAndSettle();
+
+      // Lands directly on PostRunSummaryScreen and stops the background service
+      expect(find.text('Run Complete! : You Found Your Rhythm'), findsOneWidget);
+      expect(find.text('Save & Finish Workout'), findsOneWidget);
+      expect(foregroundService.isServiceActive, isFalse);
     },
   );
 }

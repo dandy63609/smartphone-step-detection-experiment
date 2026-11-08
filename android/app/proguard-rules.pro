@@ -15,3 +15,6 @@
 # Don't warn on unused flutter dependencies
 -dontwarn io.flutter.**
 
+# Preserve flutter_foreground_task classes in release builds
+-keep class com.pravera.flutter_foreground_task.** { *; }
+

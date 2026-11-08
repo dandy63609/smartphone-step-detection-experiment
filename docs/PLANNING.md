@@ -231,7 +231,7 @@ Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh *
 
 ---
 
-## 7. Sprint Roadmap Baru: Robustness, Lifecycle, Persistence & Background Service `[STATUS: IN-PROGRESS]`
+## 7. Sprint Roadmap Baru: Robustness, Lifecycle, Persistence & Background Service `[STATUS: DONE]`
 
 Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand identity, persistensi data sesi aktif, serta persiapan pengujian fisik di kantong/layar mati.
 
@@ -242,7 +242,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 | **Sprint 1** | **Stream & Lifecycle Bug Fixes** | Auto-recovery sensor stream, restart session mulus setelah Finish, eliminasi false sensorError | `DONE` |
 | **Sprint 2** | **Visual Identity & Polish** | Logo Stradio header, headline *"Run the Vibe"*, 3-kolom Sensor Labs, button spinner | `DONE` |
 | **Sprint 3** | **Active Session Persistence** | Pilihan A: Incremental auto-flush buffer ke cache lokal (`.temp_run.json`), crash recovery dialog | `DONE` |
-| **Sprint 4** | **Background Service & Lockscreen Control** | Android Foreground Service (`flutter_foreground_task`), lockscreen interactive notification | `READY / NEXT` |
+| **Sprint 4** | **Background Service & Lockscreen Control** | Android Foreground Service (`flutter_foreground_task`), lockscreen interactive notification | `DONE` |
 
 ---
 
@@ -280,7 +280,7 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 7.5 Rincian Sprint 4: Background Service & Interactive Notification `[STATUS: READY / NEXT]`
+### 7.5 Rincian Sprint 4: Background Service & Interactive Notification `[STATUS: DONE]`
 1. **Android Foreground Service (`flutter_foreground_task`):**
    - Mencegah OS Android (Doze Mode & Battery Saver) mematikan sensor akselerometer saat layar terkunci (*screen sleep*) atau saat ponsel berada di dalam saku celana (Kondisi E5–E8).
 2. **Interactive Notification (Media/Workout Style):**

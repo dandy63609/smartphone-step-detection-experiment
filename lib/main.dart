@@ -6,6 +6,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/stradio/active_run_screen.dart';
 import 'screens/stradio/sensor_labs_sheet.dart';
 import 'services/export_service.dart';
+import 'services/foreground_notification_service.dart';
 import 'services/posthog_service.dart';
 import 'services/preferences_service.dart';
 import 'services/recording_repository.dart';
@@ -43,6 +44,7 @@ class StradioApp extends StatefulWidget {
     this.recordingService,
     this.exportService,
     this.postHogService,
+    this.foregroundNotificationService,
     this.initialLabSettings = const StradioLabSettings(),
     this.initialDarkMode = false,
   });
@@ -51,6 +53,7 @@ class StradioApp extends StatefulWidget {
   final RecordingService? recordingService;
   final ExportService? exportService;
   final PostHogTelemetryService? postHogService;
+  final ForegroundNotificationService? foregroundNotificationService;
   final StradioLabSettings initialLabSettings;
   final bool initialDarkMode;
 
@@ -87,6 +90,7 @@ class _StradioAppState extends State<StradioApp> {
         recordingService: widget.recordingService,
         exportService: widget.exportService,
         postHogService: widget.postHogService,
+        foregroundService: widget.foregroundNotificationService,
         initialLabSettings: widget.initialLabSettings,
         onToggleThemeMode: _toggleThemeMode,
       ),

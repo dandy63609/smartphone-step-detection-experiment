@@ -8,6 +8,7 @@ import '../../algorithms/step_detector.dart';
 import '../../evaluation/run_metrics_calculator.dart';
 import '../../models/experiment_models.dart';
 import '../../services/export_service.dart';
+import '../../services/foreground_notification_service.dart';
 import '../../services/posthog_service.dart';
 import '../../services/preferences_service.dart';
 import '../../services/recording_repository.dart';
@@ -38,6 +39,7 @@ class ActiveRunScreen extends StatefulWidget {
     this.recordingService,
     this.exportService,
     this.postHogService,
+    this.foregroundService,
     this.initialLabSettings = const StradioLabSettings(),
     this.onToggleThemeMode,
   });
@@ -46,6 +48,7 @@ class ActiveRunScreen extends StatefulWidget {
   final RecordingService? recordingService;
   final ExportService? exportService;
   final PostHogTelemetryService? postHogService;
+  final ForegroundNotificationService? foregroundService;
   final StradioLabSettings initialLabSettings;
   final VoidCallback? onToggleThemeMode;
 
@@ -58,6 +61,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
   late final RecordingService _recordingService;
   late final ExportService _exportService;
   late final PostHogTelemetryService _postHogService;
+  late final ForegroundNotificationService _foregroundService;
   late StradioLabSettings _labSettings;
 
   _RunStreamState _streamState = _RunStreamState.connecting;
@@ -97,12 +101,25 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     _recordingService = widget.recordingService ?? RecordingService();
     _exportService = widget.exportService ?? ExportService();
     _postHogService = widget.postHogService ?? PostHogTelemetryService();
+    _foregroundService =
+        widget.foregroundService ?? FlutterForegroundNotificationService();
     _labSettings = widget.initialLabSettings;
+
+    _foregroundService.addActionListener(_handleNotificationAction);
 
     _resetDetectors();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkUnfinishedSessionAndInitialize();
     });
+  }
+
+  void _handleNotificationAction(String action) {
+    if (!mounted) return;
+    if (action == 'pause_resume') {
+      _togglePauseResume();
+    } else if (action == 'finish') {
+      _finishRun();
+    }
   }
 
   Future<void> _checkUnfinishedSessionAndInitialize() async {
@@ -394,6 +411,18 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       setState(() {
         _activeDurationSeconds += 1.0;
       });
+      if (_foregroundService.isServiceActive) {
+        unawaited(
+          _foregroundService.updateWorkoutService(
+            steps: _primaryDetections.length,
+            targetSteps: _labSettings.targetSteps,
+            activeDurationSeconds: _activeDurationSeconds,
+            targetBpm: _labSettings.targetBpm,
+            algorithmName: _labSettings.primaryAlgorithm.displayName,
+            isRunning: true,
+          ),
+        );
+      }
     });
   }
 
@@ -430,6 +459,18 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       }
       if (primaryOut.step != null) {
         _lastStepFlashAt = DateTime.now();
+        if (_foregroundService.isServiceActive) {
+          unawaited(
+            _foregroundService.updateWorkoutService(
+              steps: _primaryDetections.length,
+              targetSteps: _labSettings.targetSteps,
+              activeDurationSeconds: _activeDurationSeconds,
+              targetBpm: _labSettings.targetBpm,
+              algorithmName: _labSettings.primaryAlgorithm.displayName,
+              isRunning: true,
+            ),
+          );
+        }
       }
       _updateSmoothedWaveformBars(
         stepConfirmed: primaryOut.step != null,
@@ -522,6 +563,16 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         _streamState = _RunStreamState.paused;
       });
       unawaited(
+        _foregroundService.updateWorkoutService(
+          steps: _primaryDetections.length,
+          targetSteps: _labSettings.targetSteps,
+          activeDurationSeconds: _activeDurationSeconds,
+          targetBpm: _labSettings.targetBpm,
+          algorithmName: _labSettings.primaryAlgorithm.displayName,
+          isRunning: false,
+        ),
+      );
+      unawaited(
         _postHogService.captureRunPaused(
           recordingId: _recordingId,
           participantId: _labSettings.participantId,
@@ -540,6 +591,17 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         _sensorErrorText = null;
       });
       _startElapsedTicker();
+      unawaited(_foregroundService.requestNotificationPermission());
+      unawaited(
+        _foregroundService.startWorkoutService(
+          steps: _primaryDetections.length,
+          targetSteps: _labSettings.targetSteps,
+          activeDurationSeconds: _activeDurationSeconds,
+          targetBpm: _labSettings.targetBpm,
+          algorithmName: _labSettings.primaryAlgorithm.displayName,
+          isRunning: true,
+        ),
+      );
       if (isFirstStart) {
         unawaited(
           _postHogService.captureRunStarted(
@@ -564,6 +626,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
   Future<void> _finishRun() async {
     _elapsedTimer?.cancel();
     unawaited(_recordingService.stop());
+    unawaited(_foregroundService.stopWorkoutService());
 
     final palette = StradioPalette.of(context);
 
@@ -717,6 +780,18 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
             _labSettings = updated;
           });
           unawaited(StradioPreferencesService.saveLabSettings(updated));
+          if (_foregroundService.isServiceActive) {
+            unawaited(
+              _foregroundService.updateWorkoutService(
+                steps: _primaryDetections.length,
+                targetSteps: _labSettings.targetSteps,
+                activeDurationSeconds: _activeDurationSeconds,
+                targetBpm: _labSettings.targetBpm,
+                algorithmName: _labSettings.primaryAlgorithm.displayName,
+                isRunning: _streamState == _RunStreamState.running,
+              ),
+            );
+          }
         },
       ),
     );
@@ -733,6 +808,18 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       _labSettings = _labSettings.copyWith(targetBpm: bpm);
     });
     unawaited(StradioPreferencesService.saveLabSettings(_labSettings));
+    if (_foregroundService.isServiceActive) {
+      unawaited(
+        _foregroundService.updateWorkoutService(
+          steps: _primaryDetections.length,
+          targetSteps: _labSettings.targetSteps,
+          activeDurationSeconds: _activeDurationSeconds,
+          targetBpm: _labSettings.targetBpm,
+          algorithmName: _labSettings.primaryAlgorithm.displayName,
+          isRunning: _streamState == _RunStreamState.running,
+        ),
+      );
+    }
   }
 
   /// Applies asymmetric spring attack/decay physics (fast upward attack on
@@ -786,6 +873,8 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
   void dispose() {
     _elapsedTimer?.cancel();
     _sensorHealthNotifier.dispose();
+    _foregroundService.removeActionListener(_handleNotificationAction);
+    unawaited(_foregroundService.stopWorkoutService());
     unawaited(_recordingService.dispose());
     super.dispose();
   }
