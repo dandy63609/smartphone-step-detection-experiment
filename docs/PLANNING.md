@@ -291,12 +291,17 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 
 ---
 
-### 7.6 Catatan Teknis Deployment APK (Pembaruan & Signature Key)
-* **Mengapa Muncul Pesan "App Not Installed / Package Conflicts" saat Update APK?**
-  1. **Keystore Signature Mismatch:** APK debug menggunakan `debug.keystore` (unik per mesin/komputer), sedangkan APK release menggunakan release key. Android secara ketat melarang update jika signature key berbeda untuk melindungi aplikasi dari pembajakan.
-  2. **Version Code Identik / Turun:** Jika `versionCode` di `pubspec.yaml` tidak dinaikkan (tetap `1.0.0+1`), installer Android bisa menolak pembaruan.
-* **Standar Penanganan:**
-  * Selama tahap pengembangan cepat, hapus (*uninstall*) APK lama sebelum menginstal APK baru.
-  * Untuk pembaruan tanpa uninstall di kemudian hari: gunakan build mode konsisten dan naikkan build number di `pubspec.yaml` (`1.0.0+2`, `1.0.0+3`, dst).
+### 7.6 Catatan Teknis Deployment APK (Pembaruan & Signature Key) `[STATUS: DONE]`
+* **Penyebab Error "App Not Installed / Package Conflicts":**
+  1. **Keystore Signature Mismatch:** CI/CD GitHub Actions sebelumnya men-generate `debug.keystore` acak baru di setiap run (karena runner ephemeral), sehingga tanda tangan digital berbeda antar rilis dan diblokir oleh Android.
+  2. **Version Code Identik:** Versi sebelumnya terkunci pada `1.0.0+1` di `pubspec.yaml` sehingga nomor build tidak pernah naik.
+* **Solusi Terimplementasi (Opsi A - CI/CD Release Automation):**
+  1. **Dynamic SemVer & Incremental Build Number:**
+     - `VERSION_NAME` diambil dinamis dari Git tag (misal tag `v0.2.0` menjadi nama versi `0.2.0`).
+     - `VERSION_CODE` diambil dari `${{ github.run_number }}` yang selalu naik secara linear di setiap build GitHub Actions.
+  2. **Persistent Release Keystore via GitHub Secrets:**
+     - Gradle membaca `release.keystore` persisten yang didecode dari secret `RELEASE_KEYSTORE_BASE64`.
+     - Tanda tangan digital APK selalu konsisten di setiap rilis, memungkinkan instalasi update langsung tanpa uninstall.
+     - Fallback otomatis ke `debug` signing saat build lokal tanpa secret, menjaga stabilitas environment developer.
 
 

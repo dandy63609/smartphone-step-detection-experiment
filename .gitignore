@@ -56,3 +56,8 @@ skills-lock.json
 
 # Fallow
 .fallow/
+
+# Android Keystore files
+*.keystore
+*.jks
+android/app/release.keystore

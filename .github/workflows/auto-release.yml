@@ -36,9 +36,31 @@ jobs:
       - name: Run Tests Before Release
         run: flutter test
 
-      - name: Build Optimized Split-ABI APKs
+      - name: Decode Android Release Keystore
+        if: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
         run: |
-          flutter build apk --release --split-per-abi --tree-shake-icons --obfuscate --split-debug-info=build/debug-info
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+
+      - name: Build Optimized Split-ABI APKs
+        env:
+          KEYSTORE_FILE: release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          # Strip leading 'v' e.g. v0.2.0 -> 0.2.0
+          VERSION_NAME="${TAG_NAME#v}"
+          # Incremental integer build number for Android versionCode
+          VERSION_CODE="${{ github.run_number }}"
+          echo "Building Release APK with Version Name: $VERSION_NAME, Version Code: $VERSION_CODE"
+
+          flutter build apk --release --split-per-abi \
+            --build-name="$VERSION_NAME" \
+            --build-number="$VERSION_CODE" \
+            --tree-shake-icons --obfuscate --split-debug-info=build/debug-info
 
       - name: Prepare Release APK Assets
         id: prepare_apks
