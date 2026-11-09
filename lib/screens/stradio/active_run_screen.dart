@@ -411,6 +411,12 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       setState(() {
         _activeDurationSeconds += 1.0;
       });
+      if (_activeSamples.isNotEmpty) {
+        _sensorHealthNotifier.value = RunMetricsCalculator.analyzeSensorHealth(
+          samples: _activeSamples,
+          requestedRateHz: 100.0,
+        );
+      }
       if (_foregroundService.isServiceActive) {
         unawaited(
           _foregroundService.updateWorkoutService(
@@ -478,11 +484,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       );
     }
 
-    if (primaryOut?.step != null || sample.sampleIndex % 4 == 0) {
-      _sensorHealthNotifier.value = RunMetricsCalculator.analyzeSensorHealth(
-        samples: _activeSamples,
-        requestedRateHz: 100.0,
-      );
+    if (primaryOut?.step != null || sample.sampleIndex % 10 == 0) {
       setState(() {});
     }
   }

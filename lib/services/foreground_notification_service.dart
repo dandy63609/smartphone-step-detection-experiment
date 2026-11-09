@@ -135,6 +135,7 @@ class FlutterForegroundNotificationService
         ),
       );
 
+      FlutterForegroundTask.initCommunicationPort();
       FlutterForegroundTask.addTaskDataCallback((dynamic data) {
         if (data is Map && data['action'] is String) {
           _dispatchAction(data['action'] as String);
@@ -173,11 +174,11 @@ class FlutterForegroundNotificationService
     return [
       NotificationButton(
         id: 'pause_resume',
-        text: isRunning ? '⏸ Pause' : '▶ Resume',
+        text: isRunning ? 'Pause' : 'Resume',
       ),
       const NotificationButton(
         id: 'finish',
-        text: '🏁 Finish',
+        text: 'Finish',
       ),
     ];
   }
