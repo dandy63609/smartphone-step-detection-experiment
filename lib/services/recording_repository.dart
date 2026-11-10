@@ -24,21 +24,38 @@ String nextRecordingId(Iterable<String> existingIds, DateTime date) {
   return 'REC_${day}_${(highest + 1).toString().padLeft(3, '0')}';
 }
 
-String recordingToJson(SavedRecording recording) => jsonEncode({
-  'recording_id': recording.recordingId,
-  'created_at': recording.createdAt.toIso8601String(),
-  'config': recording.config.toMap(),
-  'live_step_count': recording.liveStepCount,
-  'replay_detections': {
-    for (final entry in recording.replayDetections.entries)
-      entry.key.value: [for (final e in entry.value) e.toMap()],
-  },
-  'replay_variant_detections': {
-    for (final entry in recording.replayVariantDetections.entries)
-      entry.key.value: [for (final e in entry.value) e.toMap()],
-  },
-  'samples': [for (final s in recording.samples) s.toMap()],
-});
+String recordingToJson(
+  SavedRecording recording, {
+  bool? includeRawSamples,
+}) {
+  final keepRaw = includeRawSamples ?? recording.includeRawSamples;
+  return jsonEncode({
+    'recording_id': recording.recordingId,
+    'created_at': recording.createdAt.toIso8601String(),
+    'config': recording.config.toMap(),
+    'live_step_count': recording.liveStepCount,
+    'summary_duration_seconds':
+        recording.summaryDurationSeconds ?? recording.durationSeconds,
+    'summary_cadence_buckets_spm': recording.summaryCadenceBucketsSpm,
+    if (recording.targetBpm != null) 'target_bpm': recording.targetBpm,
+    'include_raw_samples': keepRaw,
+    'replay_detections': keepRaw
+        ? {
+            for (final entry in recording.replayDetections.entries)
+              entry.key.value: [for (final e in entry.value) e.toMap()],
+          }
+        : const <String, Object>{},
+    'replay_variant_detections': keepRaw
+        ? {
+            for (final entry in recording.replayVariantDetections.entries)
+              entry.key.value: [for (final e in entry.value) e.toMap()],
+          }
+        : const <String, Object>{},
+    'samples': keepRaw
+        ? [for (final s in recording.samples) s.toMap()]
+        : const <Object>[],
+  });
+}
 
 SavedRecording recordingFromJson(String source) {
   final root = jsonDecode(source);
@@ -71,6 +88,17 @@ SavedRecording recordingFromJson(String source) {
       ];
     }
   }
+  final rawBuckets = root['summary_cadence_buckets_spm'];
+  final buckets = rawBuckets is List
+      ? [for (final v in rawBuckets) (v as num).toDouble()]
+      : const <double>[];
+  final parsedSamples = [
+    for (final row in (root['samples'] as List? ?? const []))
+      SensorSample.fromMap(id, row as Map<String, dynamic>),
+  ];
+  final includeRaw =
+      root['include_raw_samples'] as bool? ?? parsedSamples.isNotEmpty;
+
   return SavedRecording(
     recordingId: id,
     createdAt:
@@ -80,10 +108,12 @@ SavedRecording recordingFromJson(String source) {
     liveStepCount: (root['live_step_count'] as num?)?.toInt() ?? 0,
     replayDetections: replay,
     replayVariantDetections: variantReplay,
-    samples: [
-      for (final row in (root['samples'] as List? ?? const []))
-        SensorSample.fromMap(id, row as Map<String, dynamic>),
-    ],
+    summaryDurationSeconds:
+        (root['summary_duration_seconds'] as num?)?.toDouble(),
+    summaryCadenceBucketsSpm: buckets,
+    targetBpm: (root['target_bpm'] as num?)?.toInt(),
+    includeRawSamples: includeRaw,
+    samples: parsedSamples,
   );
 }
 

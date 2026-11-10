@@ -49,6 +49,7 @@ class PostHogTelemetryService {
     String? apiKey,
     String? host,
     PostHogTransport? transport,
+    this.enabled = true,
   }) : _apiKey =
            apiKey ??
            const String.fromEnvironment('POSTHOG_API_KEY', defaultValue: ''),
@@ -63,6 +64,7 @@ class PostHogTelemetryService {
   String _apiKey;
   String _host;
   final PostHogTransport _transport;
+  bool enabled;
 
   final List<PostHogEventRecord> _recordedEvents = [];
   String? _lastError;
@@ -71,6 +73,11 @@ class PostHogTelemetryService {
   String get host => _host;
   bool get isConfigured => _apiKey.trim().isNotEmpty;
   String? get lastError => _lastError;
+
+  /// Enables or disables network telemetry dispatch per user opt-in/opt-out preference.
+  void setEnabled(bool value) {
+    enabled = value;
+  }
 
   List<PostHogEventRecord> get recordedEvents =>
       List.unmodifiable(_recordedEvents);
@@ -107,7 +114,7 @@ class PostHogTelemetryService {
     final ts = (timestamp ?? DateTime.now()).toUtc().toIso8601String();
     var delivered = false;
 
-    if (isConfigured) {
+    if (isConfigured && enabled) {
       final draft = PostHogEventRecord(
         event: event,
         distinctId: distinctId,
@@ -145,7 +152,7 @@ class PostHogTelemetryService {
 
   /// Re-sends any queued events that were recorded before the API key was set.
   Future<int> flushQueuedEvents() async {
-    if (!isConfigured) return 0;
+    if (!isConfigured || !enabled) return 0;
     var newlyDelivered = 0;
     for (var i = 0; i < _recordedEvents.length; i++) {
       final item = _recordedEvents[i];

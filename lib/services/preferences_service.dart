@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/experiment_models.dart';
@@ -17,6 +19,7 @@ class StradioPreferencesService {
   static const _keyPhonePlacement = 'stradio_phone_placement';
   static const _keyPrimaryAlgorithm = 'stradio_primary_algorithm';
   static const _keyDarkMode = 'stradio_dark_mode';
+  static const _keyUserProfileJson = 'stradio_user_profile_v1';
 
   static SharedPreferences? _prefs;
 
@@ -99,6 +102,30 @@ class StradioPreferencesService {
     final p = _prefs ?? await SharedPreferences.getInstance();
     _prefs = p;
     await p.setBool(_keyDarkMode, isDark);
+  }
+
+  /// Loads the saved [StradioUserProfile] or returns the default profile.
+  static StradioUserProfile loadUserProfile() {
+    final raw = _prefs?.getString(_keyUserProfileJson);
+    if (raw == null || raw.trim().isEmpty) {
+      return const StradioUserProfile();
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return StradioUserProfile.fromMap(decoded);
+      }
+    } on Object {
+      // Fallback to clean default if stored JSON is malformed.
+    }
+    return const StradioUserProfile();
+  }
+
+  /// Saves the [StradioUserProfile] to local storage.
+  static Future<void> saveUserProfile(StradioUserProfile profile) async {
+    final p = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = p;
+    await p.setString(_keyUserProfileJson, jsonEncode(profile.toMap()));
   }
 }
 

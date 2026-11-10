@@ -60,11 +60,19 @@ class RunSummaryMetrics {
 class RunMetricsCalculator {
   const RunMetricsCalculator._();
 
-  /// Standardized stride length estimate in meters by activity.
-  static double strideLengthMeters(Activity activity) => switch (activity) {
-    Activity.walking => 0.74,
-    Activity.jogging => 0.95,
-  };
+  /// Standardized or height-calibrated stride length estimate in meters by activity.
+  static double strideLengthMeters(Activity activity, {double? heightCm}) {
+    if (heightCm != null && heightCm >= 100.0 && heightCm <= 240.0) {
+      return switch (activity) {
+        Activity.walking => heightCm * 0.00415,
+        Activity.jogging => heightCm * 0.0055,
+      };
+    }
+    return switch (activity) {
+      Activity.walking => 0.74,
+      Activity.jogging => 0.95,
+    };
+  }
 
   /// Default target tempo BPM for reactive rhythm matching.
   static int defaultTargetBpm(Activity activity) => switch (activity) {
@@ -72,13 +80,14 @@ class RunMetricsCalculator {
     Activity.jogging => 165,
   };
 
-  /// Distance in kilometers from confirmed step count and activity.
+  /// Distance in kilometers from confirmed step count, activity, and optional [heightCm].
   static double estimateDistanceKm({
     required int steps,
     required Activity activity,
+    double? heightCm,
   }) {
     if (steps <= 0) return 0.0;
-    return (steps * strideLengthMeters(activity)) / 1000.0;
+    return (steps * strideLengthMeters(activity, heightCm: heightCm)) / 1000.0;
   }
 
   /// Speed in km/h from distance (km) and active elapsed duration (seconds).
@@ -194,9 +203,12 @@ class RunMetricsCalculator {
     required double activeDurationSeconds,
     int? targetBpm,
     int bucketCount = 8,
+    double? heightCm,
+    int? overrideStepCount,
+    List<double>? fallbackCadenceBucketsSpm,
   }) {
     final resolvedBpm = targetBpm ?? defaultTargetBpm(activity);
-    final totalSteps = detections.length;
+    final totalSteps = overrideStepCount ?? detections.length;
     final latestTs = samples.isNotEmpty
         ? samples.last.timestampNs
         : (detections.isNotEmpty ? detections.last.outputTimestampNs : 0);
@@ -213,7 +225,11 @@ class RunMetricsCalculator {
               ? (endTs - startTs) / 1e9
               : 0.0);
 
-    final distanceKm = estimateDistanceKm(steps: totalSteps, activity: activity);
+    final distanceKm = estimateDistanceKm(
+      steps: totalSteps,
+      activity: activity,
+      heightCm: heightCm,
+    );
     final speedKmh = estimateSpeedKmh(
       distanceKm: distanceKm,
       activeDurationSeconds: durationSec,
@@ -233,12 +249,15 @@ class RunMetricsCalculator {
       actualSpm: effectiveSpmForRhythm,
       targetBpm: resolvedBpm,
     );
-    final buckets = buildCadenceBuckets(
+    final computedBuckets = buildCadenceBuckets(
       detections: detections,
       startTimestampNs: startTs,
       endTimestampNs: endTs,
       bucketCount: bucketCount,
     );
+    final buckets = computedBuckets.isNotEmpty
+        ? computedBuckets
+        : (fallbackCadenceBucketsSpm ?? const []);
 
     return RunSummaryMetrics(
       totalSteps: totalSteps,

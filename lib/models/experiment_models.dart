@@ -1,5 +1,115 @@
 import 'dart:math' as math;
 
+import '../l10n/stradio_strings.dart';
+
+/// End-user profile and app-wide preferences stored locally on the device (`v0.2.0`).
+class StradioUserProfile {
+  const StradioUserProfile({
+    this.nickname = defaultNickname,
+    this.heightCm,
+    this.dailyStepGoal = defaultDailyStepGoal,
+    this.isOpenGoal = false,
+    this.language = AppLanguage.en,
+    this.analyticsEnabled = true,
+    this.developerModeEnabled = false,
+    this.hasCompletedOnboarding = false,
+    this.activeSoundscapeId = 'neon_stride',
+    this.favoriteSoundscapeIds = const {},
+  });
+
+  static const String defaultNickname = 'Runner';
+  static const int defaultDailyStepGoal = 5000;
+
+  final String nickname;
+  final double? heightCm;
+  final int dailyStepGoal;
+  final bool isOpenGoal;
+  final AppLanguage language;
+  final bool analyticsEnabled;
+  final bool developerModeEnabled;
+  final bool hasCompletedOnboarding;
+  final String activeSoundscapeId;
+  final Set<String> favoriteSoundscapeIds;
+
+  /// Guarantees a non-empty greeting name, falling back to `Runner`.
+  String get effectiveNickname {
+    final trimmed = nickname.trim();
+    return trimmed.isEmpty ? defaultNickname : trimmed;
+  }
+
+  /// Validated height in centimeters (100 to 240 cm), or null if unset/out of range.
+  double? get validHeightCm {
+    final h = heightCm;
+    if (h == null || h < 100.0 || h > 240.0) return null;
+    return h;
+  }
+
+  StradioUserProfile copyWith({
+    String? nickname,
+    double? heightCm,
+    bool clearHeight = false,
+    int? dailyStepGoal,
+    bool? isOpenGoal,
+    AppLanguage? language,
+    bool? analyticsEnabled,
+    bool? developerModeEnabled,
+    bool? hasCompletedOnboarding,
+    String? activeSoundscapeId,
+    Set<String>? favoriteSoundscapeIds,
+  }) {
+    return StradioUserProfile(
+      nickname: nickname ?? this.nickname,
+      heightCm: clearHeight ? null : (heightCm ?? this.heightCm),
+      dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
+      isOpenGoal: isOpenGoal ?? this.isOpenGoal,
+      language: language ?? this.language,
+      analyticsEnabled: analyticsEnabled ?? this.analyticsEnabled,
+      developerModeEnabled: developerModeEnabled ?? this.developerModeEnabled,
+      hasCompletedOnboarding:
+          hasCompletedOnboarding ?? this.hasCompletedOnboarding,
+      activeSoundscapeId: activeSoundscapeId ?? this.activeSoundscapeId,
+      favoriteSoundscapeIds:
+          favoriteSoundscapeIds ?? this.favoriteSoundscapeIds,
+    );
+  }
+
+  Map<String, Object?> toMap() => {
+    'nickname': effectiveNickname,
+    'height_cm': validHeightCm,
+    'daily_step_goal': dailyStepGoal,
+    'is_open_goal': isOpenGoal,
+    'language': language.code,
+    'analytics_enabled': analyticsEnabled,
+    'developer_mode_enabled': developerModeEnabled,
+    'has_completed_onboarding': hasCompletedOnboarding,
+    'active_soundscape_id': activeSoundscapeId,
+    'favorite_soundscape_ids': favoriteSoundscapeIds.toList(),
+  };
+
+  factory StradioUserProfile.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return const StradioUserProfile();
+    final rawFavs = map['favorite_soundscape_ids'];
+    final favs = rawFavs is Iterable
+        ? rawFavs.map((e) => e.toString()).where((s) => s.isNotEmpty).toSet()
+        : const <String>{};
+    final rawGoal = (map['daily_step_goal'] as num?)?.toInt();
+    return StradioUserProfile(
+      nickname: map['nickname']?.toString() ?? defaultNickname,
+      heightCm: (map['height_cm'] as num?)?.toDouble(),
+      dailyStepGoal:
+          (rawGoal != null && rawGoal > 0) ? rawGoal : defaultDailyStepGoal,
+      isOpenGoal: map['is_open_goal'] == true,
+      language: AppLanguageCode.parse(map['language']?.toString()),
+      analyticsEnabled: map['analytics_enabled'] as bool? ?? true,
+      developerModeEnabled: map['developer_mode_enabled'] == true,
+      hasCompletedOnboarding: map['has_completed_onboarding'] == true,
+      activeSoundscapeId:
+          map['active_soundscape_id']?.toString() ?? 'neon_stride',
+      favoriteSoundscapeIds: favs,
+    );
+  }
+}
+
 /// Factor C: activity performed during a trial.
 enum Activity { walking, jogging }
 
@@ -357,7 +467,7 @@ class DetectionEvent {
   );
 }
 
-/// A finished trial. Raw samples are never changed after saving.
+/// A finished trial or end-user workout session. Raw samples are never changed after saving.
 class SavedRecording {
   const SavedRecording({
     required this.recordingId,
@@ -367,6 +477,10 @@ class SavedRecording {
     required this.liveStepCount,
     required this.replayDetections,
     this.replayVariantDetections = const {},
+    this.summaryDurationSeconds,
+    this.summaryCadenceBucketsSpm = const [],
+    this.targetBpm,
+    this.includeRawSamples = true,
   });
 
   final String recordingId;
@@ -383,6 +497,46 @@ class SavedRecording {
   /// Offline replay results across all 4 combinations (A1, A2, B1, B2).
   final Map<AlgorithmVariant, List<DetectionEvent>> replayVariantDetections;
 
+  /// Active duration persisted for summary-only sessions (when [samples] is empty).
+  final double? summaryDurationSeconds;
+
+  /// Precomputed cadence buckets persisted for summary-only sessions.
+  final List<double> summaryCadenceBucketsSpm;
+
+  /// Target soundscape BPM active during the session.
+  final int? targetBpm;
+
+  /// When false (Developer Mode OFF), JSON serialization omits raw 100 Hz [samples]
+  /// to save device storage and keep history loading instant.
+  final bool includeRawSamples;
+
+  /// Returns a lightweight copy stripped of raw 100 Hz samples for consumer storage.
+  SavedRecording toSummaryOnly({
+    double? activeDurationSeconds,
+    List<double>? cadenceBucketsSpm,
+    int? sessionTargetBpm,
+  }) {
+    return SavedRecording(
+      recordingId: recordingId,
+      createdAt: createdAt,
+      config: config,
+      samples: const [],
+      liveStepCount: liveStepCount,
+      replayDetections: const {},
+      replayVariantDetections: const {},
+      summaryDurationSeconds:
+          activeDurationSeconds ?? summaryDurationSeconds ?? durationSeconds,
+      summaryCadenceBucketsSpm:
+          cadenceBucketsSpm ?? summaryCadenceBucketsSpm,
+      targetBpm: sessionTargetBpm ?? targetBpm,
+      includeRawSamples: false,
+    );
+  }
+
+  /// Primary step count for consumer display (falls back to replay count if needed).
+  int get effectiveStepCount =>
+      liveStepCount > 0 ? liveStepCount : replayCount(config.primaryLiveAlgorithm);
+
   int replayCount(ThresholdAlgorithm algorithm) =>
       replayDetections[algorithm]?.length ?? 0;
 
@@ -397,9 +551,13 @@ class SavedRecording {
 
   /// True when the live count equals the replay count of the same algorithm.
   bool get liveMatchesReplay =>
+      !includeRawSamples ||
       liveStepCount == replayCount(config.primaryLiveAlgorithm);
 
-  double get durationSeconds => samples.length < 2
-      ? 0
-      : (samples.last.timestampNs - samples.first.timestampNs) / 1e9;
+  double get durationSeconds {
+    if (samples.length >= 2) {
+      return (samples.last.timestampNs - samples.first.timestampNs) / 1e9;
+    }
+    return summaryDurationSeconds ?? 0.0;
+  }
 }
