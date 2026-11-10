@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smartphone_step_detection_experiment/l10n/stradio_strings.dart';
+import 'package:smartphone_step_detection_experiment/main.dart';
 import 'package:smartphone_step_detection_experiment/models/experiment_models.dart';
 import 'package:smartphone_step_detection_experiment/screens/stradio/root_navigation_shell.dart';
 import 'package:smartphone_step_detection_experiment/services/posthog_service.dart';
@@ -106,12 +107,28 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify 5-slot Floating Island labels in English
-      expect(find.byKey(const Key('floating_island_nav_bar')), findsOneWidget);
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Library'), findsOneWidget);
-      expect(find.text('Run'), findsOneWidget);
-      expect(find.text('Activity'), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
+      final navBar = find.byKey(const Key('floating_island_nav_bar'));
+      expect(navBar, findsOneWidget);
+      expect(
+        find.descendant(of: navBar, matching: find.text('Home')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Library')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Run')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Activity')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Settings')),
+        findsOneWidget,
+      );
       expect(find.text('Hello again,'), findsOneWidget);
       expect(find.text('Raka'), findsOneWidget);
 
@@ -124,11 +141,26 @@ void main() {
 
       expect(latestProfile?.language, AppLanguage.id);
       // Verify 5-slot Floating Island labels immediately updated to Bahasa Indonesia
-      expect(find.text('Beranda'), findsOneWidget);
-      expect(find.text('Koleksi'), findsOneWidget);
-      expect(find.text('Lari'), findsOneWidget);
-      expect(find.text('Aktivitas'), findsOneWidget);
-      expect(find.text('Setelan'), findsWidgets);
+      expect(
+        find.descendant(of: navBar, matching: find.text('Beranda')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Koleksi')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Lari')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Aktivitas')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: navBar, matching: find.text('Setelan')),
+        findsOneWidget,
+      );
 
       // Navigate back to Home tab and verify Bahasa Indonesia greeting
       await tester.tap(find.byKey(const Key('nav_tab_home')));
@@ -295,6 +327,127 @@ void main() {
         StradioPreferencesService.loadUserProfile().developerModeEnabled,
         isFalse,
       );
+    },
+  );
+
+  testWidgets(
+    'Stage 4D: HomeScreen accumulates multiple same-day sessions, shows goal reached banner, Quick Start hides Labs when Dev Mode OFF, and Back returns cleanly',
+    (tester) async {
+      final now = DateTime(2026, 11, 11, 16, 0);
+      final store = _TestRecordingStore()
+        ..saved.addAll([
+          buildTodayRecording(
+            id: 'REC_20261111_002',
+            createdAt: now,
+            steps: 3100,
+            durationSeconds: 1200,
+            activity: Activity.jogging,
+          ),
+          buildTodayRecording(
+            id: 'REC_20261111_001',
+            createdAt: now.subtract(const Duration(hours: 6)),
+            steps: 2200,
+            durationSeconds: 900,
+            activity: Activity.walking,
+          ),
+        ]);
+
+      final recordingService = RecordingService(
+        source: (_) => Stream.value(
+          AccelerometerEvent(0.1, 0.2, 9.81, DateTime.now()),
+        ),
+        userSource: (_) => Stream.value(
+          UserAccelerometerEvent(0.0, 0.0, 0.0, DateTime.now()),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: StradioTheme.lightTheme,
+          home: RootNavigationShell(
+            initialProfile: const StradioUserProfile(
+              nickname: 'Raka',
+              heightCm: 170,
+              dailyStepGoal: 5000,
+              developerModeEnabled: false,
+              hasCompletedOnboarding: true,
+            ),
+            store: store,
+            recordingService: recordingService,
+            referenceDate: now,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Accumulated steps today: 3,100 + 2,200 = 5,300
+      expect(find.byKey(const Key('home_daily_goal_hero_card')), findsOneWidget);
+      expect(find.byKey(const Key('home_today_steps_value')), findsOneWidget);
+      expect(find.text('5,300 / 5,000 steps'), findsOneWidget);
+      expect(find.byKey(const Key('home_goal_reached_banner')), findsOneWidget);
+      expect(find.byKey(const Key('home_recent_session_card')), findsOneWidget);
+
+      // Tap Quick Start preset (Tempo Jog 145 BPM)
+      final tempoPreset = find.byKey(const Key('home_quick_start_tempo_jog'));
+      await tester.ensureVisible(tempoPreset);
+      await tester.tap(tempoPreset);
+      await tester.pumpAndSettle();
+
+      // ActiveRunScreen opens in consumer mode (Developer Mode OFF):
+      // - Labs button and technical A1 Midpoint badge are hidden
+      // - Back button is visible
+      expect(find.byKey(const Key('open_sensor_labs_button')), findsNothing);
+      expect(find.text('A1 Midpoint'), findsNothing);
+      expect(find.byKey(const Key('active_run_back_button')), findsOneWidget);
+
+      // Tap Back button -> returns cleanly to HomeScreen
+      await tester.tap(find.byKey(const Key('active_run_back_button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('home_daily_goal_hero_card')), findsOneWidget);
+
+      // Tap Recent Session card -> opens PostRunSummaryScreen in consumer mode
+      final recentCard = find.byKey(const Key('home_recent_session_card'));
+      await tester.ensureVisible(recentCard);
+      await tester.tap(recentCard);
+      await tester.pumpAndSettle();
+
+      expect(find.text('POST-RUN INSIGHTS'), findsOneWidget);
+      expect(find.text('3,100 STEPS'), findsOneWidget);
+      // Research-only benchmark badge & 4-Algorithm Scoreboard are hidden in consumer mode
+      expect(find.text('100 Steps Benchmark'), findsNothing);
+      expect(find.text('4-Algorithm Replay Scoreboard'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Stage 4D: StradioApp with enableConsumerShell transitions from OnboardingScreen to RootNavigationShell and HomeScreen',
+    (tester) async {
+      final store = _TestRecordingStore();
+
+      await tester.pumpWidget(
+        StradioApp(
+          store: store,
+          enableConsumerShell: true,
+          initialUserProfile: const StradioUserProfile(
+            hasCompletedOnboarding: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Starts on Step 1 of OnboardingScreen
+      expect(find.text('Find Your Stride Rhythm'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('onboarding_continue_button')));
+      await tester.pumpAndSettle();
+
+      // Skip nickname on Step 2 -> transitions directly to RootNavigationShell & HomeScreen
+      await tester.tap(find.byKey(const Key('onboarding_skip_nickname_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('floating_island_nav_bar')), findsOneWidget);
+      expect(find.byKey(const Key('home_daily_goal_hero_card')), findsOneWidget);
+      expect(find.byKey(const Key('home_empty_history_card')), findsOneWidget);
+      expect(find.text('Runner'), findsOneWidget);
     },
   );
 }

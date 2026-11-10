@@ -38,6 +38,7 @@ class PostRunSummaryScreen extends StatefulWidget {
     required this.sensorHealth,
     required this.store,
     required this.postHogService,
+    this.developerModeEnabled = true,
   });
 
   final SavedRecording recording;
@@ -45,6 +46,7 @@ class PostRunSummaryScreen extends StatefulWidget {
   final SensorHealthReport sensorHealth;
   final RecordingStore store;
   final PostHogTelemetryService postHogService;
+  final bool developerModeEnabled;
 
   @override
   State<PostRunSummaryScreen> createState() => _PostRunSummaryScreenState();
@@ -236,7 +238,9 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Session ${widget.recording.recordingId} (${widget.recording.config.activity.value.toUpperCase()} / ${widget.recording.config.phonePlacement.value.toUpperCase()})',
+                                        widget.developerModeEnabled
+                                            ? 'Session ${widget.recording.recordingId} (${widget.recording.config.activity.value.toUpperCase()} / ${widget.recording.config.phonePlacement.value.toUpperCase()})'
+                                            : '${widget.recording.config.activity.value.toUpperCase()} · ${m.targetBpm} BPM',
                                         style: StradioTypography.interLabel(
                                           fontSize: 12,
                                           color: palette.textSecondary,
@@ -250,7 +254,7 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                             ),
                             const SizedBox(height: 20),
 
-                            // 1. Main Stat Hero Card with 100-step benchmark error
+                            // 1. Main Stat Hero Card
                             _MainStatHeroCard(
                               stepsLabel: '$formattedSteps STEPS',
                               targetSteps: widget.recording.config.targetSteps,
@@ -260,6 +264,7 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                               distanceLabel:
                                   '${m.distanceKm.toStringAsFixed(2)} km',
                               isTablet: isTablet,
+                              developerModeEnabled: widget.developerModeEnabled,
                             ),
                             const SizedBox(height: 16),
 
@@ -296,13 +301,16 @@ class _PostRunSummaryScreenState extends State<PostRunSummaryScreen> {
                                 targetBpm: m.targetBpm,
                               ),
                             ],
-                            const SizedBox(height: 16),
 
-                            // 4. Research Benchmark: 4-Algorithm Replay Scoreboard
-                            _AlgorithmBenchmarkScoreboardCard(
-                              results: benchmarkResults,
-                              targetSteps: widget.recording.config.targetSteps,
-                            ),
+                            // 4. Research Benchmark: 4-Algorithm Replay Scoreboard (Only when Developer Mode is ON)
+                            if (widget.developerModeEnabled) ...[
+                              const SizedBox(height: 16),
+                              _AlgorithmBenchmarkScoreboardCard(
+                                results: benchmarkResults,
+                                targetSteps:
+                                    widget.recording.config.targetSteps,
+                              ),
+                            ],
 
                             if (_feedbackMessage != null) ...[
                               const SizedBox(height: 16),
@@ -437,6 +445,7 @@ class _MainStatHeroCard extends StatelessWidget {
     required this.spmLabel,
     required this.distanceLabel,
     required this.isTablet,
+    this.developerModeEnabled = true,
   });
 
   final String stepsLabel;
@@ -446,12 +455,14 @@ class _MainStatHeroCard extends StatelessWidget {
   final String spmLabel;
   final String distanceLabel;
   final bool isTablet;
+  final bool developerModeEnabled;
 
   @override
   Widget build(BuildContext context) {
     final palette = StradioPalette.of(context);
     final absError = errorPercent.abs();
     final signPrefix = errorPercent > 0 ? '+' : (errorPercent < 0 ? '-' : '');
+    final formattedTarget = formatStepCount(targetSteps);
 
     return Container(
       padding: EdgeInsets.all(isTablet ? 24 : 20),
@@ -477,21 +488,26 @@ class _MainStatHeroCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: palette.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(StradioRadii.pill),
-                ),
-                child: Text(
-                  '100 Steps Benchmark',
-                  style: StradioTypography.interLabel(
-                    fontSize: 10,
-                    color: palette.accentViolet,
+              if (developerModeEnabled) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: palette.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(StradioRadii.pill),
+                  ),
+                  child: Text(
+                    '100 Steps Benchmark',
+                    style: StradioTypography.interLabel(
+                      fontSize: 10,
+                      color: palette.accentViolet,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -512,19 +528,25 @@ class _MainStatHeroCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: absError <= 2.0
-                      ? StradioColors.statusLive.withValues(alpha: 0.14)
-                      : StradioColors.sonicCoral.withValues(alpha: 0.14),
+                  color: developerModeEnabled
+                      ? (absError <= 2.0
+                            ? StradioColors.statusLive.withValues(alpha: 0.14)
+                            : StradioColors.sonicCoral.withValues(alpha: 0.14))
+                      : palette.accentCoral.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(StradioRadii.pill),
                 ),
                 child: Text(
-                  'Target: $targetSteps ($signPrefix${absError.toStringAsFixed(1)}% err)',
+                  developerModeEnabled
+                      ? 'Target: $targetSteps ($signPrefix${absError.toStringAsFixed(1)}% err)'
+                      : 'Target: $formattedTarget steps',
                   style: StradioTypography.interLabel(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: absError <= 2.0
-                        ? StradioColors.statusLive
-                        : StradioColors.sonicCoral,
+                    color: developerModeEnabled
+                        ? (absError <= 2.0
+                              ? StradioColors.statusLive
+                              : StradioColors.sonicCoral)
+                        : palette.accentCoral,
                   ),
                 ),
               ),

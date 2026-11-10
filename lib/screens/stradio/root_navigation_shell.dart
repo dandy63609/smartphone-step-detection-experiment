@@ -11,6 +11,7 @@ import '../../services/recording_repository.dart';
 import '../../services/recording_service.dart';
 import '../../theme/stradio_theme.dart';
 import 'active_run_screen.dart';
+import 'home_screen.dart';
 import 'post_run_summary_screen.dart';
 
 /// Soundscape tempo theme metadata used across Home, Library, and Active Run.
@@ -555,6 +556,9 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
           foregroundService: _foregroundService,
           initialLabSettings: runSettings,
           onToggleThemeMode: widget.onToggleThemeMode,
+          isConsumerMode: true,
+          developerModeEnabled: _profile.developerModeEnabled,
+          userHeightCm: _profile.validHeightCm,
         ),
       ),
     );
@@ -614,7 +618,39 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
                           });
                         },
                       )
-                    : _buildDefaultHomeTab(palette, strings, dailySummary),
+                    : HomeScreen(
+                        profile: _profile,
+                        recordings: _recordings,
+                        dailySummary: dailySummary,
+                        onStartRunTap: _handleCenterRunButtonTap,
+                        onQuickStartPreset: ({
+                          required int targetBpm,
+                          required Activity activity,
+                          String? soundscapeId,
+                        }) {
+                          final remaining = dailySummary.remainingSteps(
+                            _profile.dailyStepGoal,
+                          );
+                          final resolvedTarget = _profile.isOpenGoal
+                              ? _profile.dailyStepGoal
+                              : (remaining > 0
+                                    ? remaining
+                                    : _profile.dailyStepGoal);
+                          _launchActiveRun(
+                            targetSteps: resolvedTarget,
+                            targetBpm: targetBpm,
+                            activity: activity,
+                            soundscapeId: soundscapeId,
+                          );
+                        },
+                        onSwitchTab: (tabIndex) {
+                          setState(() {
+                            _selectedTabIndex = tabIndex.clamp(0, 3);
+                          });
+                        },
+                        onToggleThemeMode: widget.onToggleThemeMode,
+                        onOpenRecording: _openRecordingSummary,
+                      ),
                 _buildLibraryTab(palette, strings),
                 _buildActivityTab(palette, strings, dailySummary),
                 _buildSettingsTab(palette, strings),
@@ -820,222 +856,33 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
     );
   }
 
-  Widget _buildDefaultHomeTab(
-    StradioPalette palette,
-    StradioStrings strings,
-    DailyProgressSummary dailySummary,
-  ) {
-    final activeTheme = StradioSoundscapeTheme.byId(
-      _profile.activeSoundscapeId,
+  void _openRecordingSummary(SavedRecording rec) {
+    final steps = rec.effectiveStepCount;
+    final primaryDetections =
+        rec.replayDetections[rec.config.primaryLiveAlgorithm] ??
+        const <DetectionEvent>[];
+    final summaryMetrics = RunMetricsCalculator.computeSummary(
+      detections: primaryDetections,
+      samples: rec.samples,
+      activity: rec.config.activity,
+      activeDurationSeconds: rec.durationSeconds,
+      targetBpm: rec.targetBpm,
+      heightCm: _profile.validHeightCm,
+      overrideStepCount: steps,
+      fallbackCadenceBucketsSpm: rec.summaryCadenceBucketsSpm,
     );
-    final bottomClearance = 104.0 + MediaQuery.paddingOf(context).bottom;
-
-    return SingleChildScrollView(
-      key: const Key('shell_default_home_scroll'),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomClearance),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Asymmetric Greeting Header
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 6,
-                      children: [
-                        Text(
-                          strings.homeGreetingPrefix,
-                          style: StradioTypography.soraHeading(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          _profile.effectiveNickname,
-                          style: StradioTypography.soraHeading(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: palette.accentCoral,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (widget.onToggleThemeMode != null)
-                    SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: IconButton(
-                        key: const Key('home_theme_toggle_button'),
-                        onPressed: widget.onToggleThemeMode,
-                        icon: Icon(
-                          palette.isDark
-                              ? Icons.light_mode_rounded
-                              : Icons.dark_mode_rounded,
-                          color: palette.textPrimary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 18),
-
-              // Daily Progress Hero Card
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: BorderRadius.circular(StradioRadii.hero),
-                  boxShadow: palette.cardShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            strings.homeDailyGoalTitle,
-                            style: StradioTypography.soraHeading(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _profile.isOpenGoal
-                                ? palette.accentViolet.withValues(alpha: 0.16)
-                                : palette.accentCoral.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(
-                              StradioRadii.pill,
-                            ),
-                          ),
-                          child: Text(
-                            _profile.isOpenGoal
-                                ? strings.homeOpenGoalBadge
-                                : strings.homeStepsOfTarget(
-                                    _formatNumber(dailySummary.todaySteps),
-                                    _formatNumber(_profile.dailyStepGoal),
-                                  ),
-                            style: StradioTypography.interLabel(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: _profile.isOpenGoal
-                                  ? palette.accentViolet
-                                  : palette.accentCoral,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _formatNumber(dailySummary.todaySteps),
-                      style: StradioTypography.soraMetric(
-                        fontSize: 44,
-                        fontWeight: FontWeight.w800,
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${dailySummary.todayDistanceKm.toStringAsFixed(2)} km · ${_formatDuration(dailySummary.todayDurationSeconds)}',
-                      style: StradioTypography.interBody(
-                        fontSize: 13,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Active Soundscape Strip
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: BorderRadius.circular(StradioRadii.card),
-                  boxShadow: palette.cardShadow,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: palette.accentViolet.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(
-                          StradioRadii.control,
-                        ),
-                      ),
-                      child: Icon(
-                        activeTheme.icon,
-                        size: 22,
-                        color: palette.accentViolet,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            strings.activeSoundscapeLabel,
-                            style: StradioTypography.interLabel(
-                              fontSize: 11,
-                              color: palette.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${activeTheme.title} · ${activeTheme.bpm} BPM',
-                            style: StradioTypography.soraHeading(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      height: 48,
-                      child: TextButton(
-                        key: const Key('home_change_soundscape_button'),
-                        onPressed: () {
-                          setState(() {
-                            _selectedTabIndex = 1;
-                          });
-                        },
-                        child: Text(
-                          strings.changeSoundscapeAction,
-                          style: StradioTypography.interLabel(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: palette.accentCoral,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+    final healthReport = RunMetricsCalculator.analyzeSensorHealth(
+      samples: rec.samples,
+    );
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PostRunSummaryScreen(
+          recording: rec,
+          metrics: summaryMetrics,
+          sensorHealth: healthReport,
+          store: _store,
+          postHogService: _postHogService,
+          developerModeEnabled: _profile.developerModeEnabled,
         ),
       ),
     );
@@ -1426,40 +1273,7 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
                       child: InkWell(
                         key: Key('activity_item_${rec.recordingId}'),
                         borderRadius: BorderRadius.circular(StradioRadii.card),
-                        onTap: () {
-                          final primaryDetections =
-                              rec.replayDetections[
-                                rec.config.primaryLiveAlgorithm
-                              ] ??
-                              const <DetectionEvent>[];
-                          final summaryMetrics =
-                              RunMetricsCalculator.computeSummary(
-                                detections: primaryDetections,
-                                samples: rec.samples,
-                                activity: rec.config.activity,
-                                activeDurationSeconds: rec.durationSeconds,
-                                targetBpm: rec.targetBpm,
-                                heightCm: _profile.validHeightCm,
-                                overrideStepCount: steps,
-                                fallbackCadenceBucketsSpm:
-                                    rec.summaryCadenceBucketsSpm,
-                              );
-                          final healthReport =
-                              RunMetricsCalculator.analyzeSensorHealth(
-                                samples: rec.samples,
-                              );
-                          Navigator.of(context).push<void>(
-                            MaterialPageRoute<void>(
-                              builder: (_) => PostRunSummaryScreen(
-                                recording: rec,
-                                metrics: summaryMetrics,
-                                sensorHealth: healthReport,
-                                store: _store,
-                                postHogService: _postHogService,
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: () => _openRecordingSummary(rec),
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(

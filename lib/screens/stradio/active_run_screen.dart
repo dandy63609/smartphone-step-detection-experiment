@@ -43,6 +43,9 @@ class ActiveRunScreen extends StatefulWidget {
     this.foregroundService,
     this.initialLabSettings = const StradioLabSettings(),
     this.onToggleThemeMode,
+    this.isConsumerMode = false,
+    this.developerModeEnabled = true,
+    this.userHeightCm,
   });
 
   final RecordingStore? store;
@@ -52,6 +55,9 @@ class ActiveRunScreen extends StatefulWidget {
   final ForegroundNotificationService? foregroundService;
   final StradioLabSettings initialLabSettings;
   final VoidCallback? onToggleThemeMode;
+  final bool isConsumerMode;
+  final bool developerModeEnabled;
+  final double? userHeightCm;
 
   @override
   State<ActiveRunScreen> createState() => _ActiveRunScreenState();
@@ -333,6 +339,8 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
           sensorHealth: health,
           store: _store,
           postHogService: _postHogService,
+          developerModeEnabled:
+              !widget.isConsumerMode || widget.developerModeEnabled,
         ),
       ),
     );
@@ -758,7 +766,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
       config.parameters,
     );
 
-    final recording = SavedRecording(
+    final fullRecording = SavedRecording(
       recordingId: _recordingId,
       createdAt: DateTime.now(),
       config: config,
@@ -766,6 +774,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
       liveStepCount: _primaryDetections.length,
       replayDetections: replayBoth,
       replayVariantDetections: replayAllFour,
+      targetBpm: _labSettings.targetBpm,
     );
 
     final metrics = RunMetricsCalculator.computeSummary(
@@ -774,10 +783,19 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
       activity: config.activity,
       activeDurationSeconds: math.max(
         _activeDurationSeconds,
-        recording.durationSeconds,
+        fullRecording.durationSeconds,
       ),
       targetBpm: _labSettings.targetBpm,
+      heightCm: widget.userHeightCm,
     );
+
+    final recording = (widget.isConsumerMode && !widget.developerModeEnabled)
+        ? fullRecording.toSummaryOnly(
+            activeDurationSeconds: metrics.activeDurationSeconds,
+            cadenceBucketsSpm: metrics.cadenceBucketsSpm,
+            sessionTargetBpm: _labSettings.targetBpm,
+          )
+        : fullRecording;
 
     final health = RunMetricsCalculator.analyzeSensorHealth(
       samples: immutableSamples,
@@ -795,6 +813,8 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
           sensorHealth: health,
           store: _store,
           postHogService: _postHogService,
+          developerModeEnabled:
+              !widget.isConsumerMode || widget.developerModeEnabled,
         ),
       ),
     );
@@ -802,6 +822,10 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
     if (!mounted) return;
     if (savedAndFinished == true) {
       unawaited(_store.clearActiveSessionCache());
+      if (widget.isConsumerMode && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+        return;
+      }
       setState(() {
         _labSettings = _labSettings.copyWith(
           trialNumber: _labSettings.trialNumber + 1,
@@ -978,6 +1002,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
       activity: _labSettings.activity,
       activeDurationSeconds: _activeDurationSeconds,
       targetBpm: _labSettings.targetBpm,
+      heightCm: widget.userHeightCm,
     );
 
     final stepFlashActive =
@@ -1012,6 +1037,12 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
                         streamState: _streamState,
                         participantId: _labSettings.participantId,
                         isDark: palette.isDark,
+                        showBackButton:
+                            widget.isConsumerMode &&
+                            Navigator.of(context).canPop(),
+                        showLabsButton:
+                            !widget.isConsumerMode ||
+                            widget.developerModeEnabled,
                         onToggleTheme: widget.onToggleThemeMode,
                         onOpenLabs: _openSensorLabsDrawer,
                       ),
@@ -1031,6 +1062,9 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
                             _EditorialRunHeader(
                               targetBpm: _labSettings.targetBpm,
                               algorithmCode: _primaryVariant.code,
+                              showAlgorithmBadge:
+                                  !widget.isConsumerMode ||
+                                  widget.developerModeEnabled,
                               onSelectBpm: _updateTargetBpm,
                             ),
                             SizedBox(height: isCompactHeight ? 10 : 14),
@@ -1135,6 +1169,8 @@ class _ActiveRunTopBar extends StatelessWidget {
     required this.streamState,
     required this.participantId,
     required this.isDark,
+    this.showBackButton = false,
+    this.showLabsButton = true,
     required this.onToggleTheme,
     required this.onOpenLabs,
   });
@@ -1142,6 +1178,8 @@ class _ActiveRunTopBar extends StatelessWidget {
   final _RunStreamState streamState;
   final String participantId;
   final bool isDark;
+  final bool showBackButton;
+  final bool showLabsButton;
   final VoidCallback? onToggleTheme;
   final VoidCallback onOpenLabs;
 
@@ -1158,11 +1196,29 @@ class _ActiveRunTopBar extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Left: Official Stradio Brand Logo + Dynamic Status Pill
+        // Left: Optional Back Button + Official Stradio Brand Logo + Dynamic Status Pill
         Flexible(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (showBackButton) ...[
+                IconButton(
+                  key: const Key('active_run_back_button'),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  tooltip: 'Back',
+                  style: IconButton.styleFrom(
+                    backgroundColor: palette.surface,
+                    minimumSize: const Size(44, 44),
+                    shape: const CircleBorder(),
+                  ),
+                  icon: Icon(
+                    Icons.arrow_back_rounded,
+                    color: palette.textPrimary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Image.asset(
                 'assets/images/stradio-logo.png',
                 key: const Key('stradio_header_logo'),
@@ -1210,7 +1266,7 @@ class _ActiveRunTopBar extends StatelessWidget {
           ),
         ),
 
-        // Right: Theme Mode Toggle (Light/Dark) + Sensor Labs Icon
+        // Right: Theme Mode Toggle (Light/Dark) + Sensor Labs Icon (when Developer Mode is enabled)
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1232,27 +1288,28 @@ class _ActiveRunTopBar extends StatelessWidget {
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 8),
+              if (showLabsButton) const SizedBox(width: 8),
             ],
-            Semantics(
-              button: true,
-              label: 'Open Sensor Labs and Diagnostics',
-              child: IconButton(
-                key: const Key('open_sensor_labs_button'),
-                onPressed: onOpenLabs,
-                tooltip: 'Sensor Labs & Diagnostics',
-                style: IconButton.styleFrom(
-                  backgroundColor: palette.surface,
-                  minimumSize: const Size(48, 48),
-                  shape: const CircleBorder(),
-                ),
-                icon: Icon(
-                  Icons.science_outlined,
-                  color: palette.accentViolet,
-                  size: 22,
+            if (showLabsButton)
+              Semantics(
+                button: true,
+                label: 'Open Sensor Labs and Diagnostics',
+                child: IconButton(
+                  key: const Key('open_sensor_labs_button'),
+                  onPressed: onOpenLabs,
+                  tooltip: 'Sensor Labs & Diagnostics',
+                  style: IconButton.styleFrom(
+                    backgroundColor: palette.surface,
+                    minimumSize: const Size(48, 48),
+                    shape: const CircleBorder(),
+                  ),
+                  icon: Icon(
+                    Icons.science_outlined,
+                    color: palette.accentViolet,
+                    size: 22,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ],
@@ -1264,11 +1321,13 @@ class _EditorialRunHeader extends StatelessWidget {
   const _EditorialRunHeader({
     required this.targetBpm,
     required this.algorithmCode,
+    this.showAlgorithmBadge = true,
     required this.onSelectBpm,
   });
 
   final int targetBpm;
   final String algorithmCode;
+  final bool showAlgorithmBadge;
   final ValueChanged<int> onSelectBpm;
 
   @override
@@ -1317,26 +1376,28 @@ class _EditorialRunHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: palette.surfaceSubtle,
-                      borderRadius: BorderRadius.circular(StradioRadii.pill),
-                    ),
-                    child: Text(
-                      '$algorithmCode Midpoint',
-                      style: StradioTypography.interLabel(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textSecondary,
-                        letterSpacing: 0.2,
+                  if (showAlgorithmBadge) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.surfaceSubtle,
+                        borderRadius: BorderRadius.circular(StradioRadii.pill),
+                      ),
+                      child: Text(
+                        '$algorithmCode Midpoint',
+                        style: StradioTypography.interLabel(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: palette.textSecondary,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
