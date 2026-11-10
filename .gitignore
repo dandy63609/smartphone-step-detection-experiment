@@ -61,3 +61,8 @@ skills-lock.json
 *.keystore
 *.jks
 android/app/release.keystore
+
+# Environment & local Dart defines (never commit secrets)
+.env
+.env.*
+dart_defines.json
