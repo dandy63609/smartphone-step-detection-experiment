@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../algorithms/step_detector.dart';
 import '../../evaluation/run_metrics_calculator.dart';
@@ -56,7 +57,8 @@ class ActiveRunScreen extends StatefulWidget {
   State<ActiveRunScreen> createState() => _ActiveRunScreenState();
 }
 
-class _ActiveRunScreenState extends State<ActiveRunScreen> {
+class _ActiveRunScreenState extends State<ActiveRunScreen>
+    with SingleTickerProviderStateMixin {
   late final RecordingStore _store;
   late final RecordingService _recordingService;
   late final ExportService _exportService;
@@ -76,6 +78,10 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
   final ListQueue<double> _recentMagnitudes = ListQueue<double>();
   final ListQueue<double> _recentThresholds = ListQueue<double>();
   late List<double> _smoothedBarHeights;
+  late List<double> _targetBarHeights;
+  final ValueNotifier<int> _waveformRepaintNotifier = ValueNotifier<int>(0);
+  late final Ticker _waveformTicker;
+  Timer? _stepFlashTimer;
   final ValueNotifier<SensorHealthReport> _sensorHealthNotifier = ValueNotifier(
     const SensorHealthReport(
       sampleCount: 0,
@@ -105,12 +111,57 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         widget.foregroundService ?? FlutterForegroundNotificationService();
     _labSettings = widget.initialLabSettings;
 
+    _waveformTicker = createTicker(_onWaveformTick);
     _foregroundService.addActionListener(_handleNotificationAction);
 
     _resetDetectors();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkUnfinishedSessionAndInitialize();
     });
+  }
+
+  void _syncWaveformTicker() {
+    if (!mounted) return;
+    if (_streamState == _RunStreamState.running) {
+      if (!_waveformTicker.isActive) {
+        _waveformTicker.start();
+      }
+    } else {
+      if (_waveformTicker.isActive) {
+        _waveformTicker.stop();
+      }
+    }
+  }
+
+  void _onWaveformTick(Duration elapsed) {
+    if (!mounted || _streamState != _RunStreamState.running) {
+      if (_waveformTicker.isActive) _waveformTicker.stop();
+      return;
+    }
+    const barCount = 28;
+    const attackAlpha = 0.36;
+    const decayAlpha = 0.14;
+    var changed = false;
+
+    for (var i = 0; i < barCount; i++) {
+      final target = _targetBarHeights[i];
+      final current = _smoothedBarHeights[i];
+      final diff = target - current;
+      if (diff.abs() > 0.002) {
+        final alpha = diff >= 0 ? attackAlpha : decayAlpha;
+        _smoothedBarHeights[i] = current + diff * alpha;
+        changed = true;
+      } else if (current != target) {
+        _smoothedBarHeights[i] = target;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      _waveformRepaintNotifier.value++;
+    } else {
+      _waveformTicker.stop();
+    }
   }
 
   void _handleNotificationAction(String action) {
@@ -313,6 +364,10 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     _smoothedBarHeights = List<double>.from(
       _VerticalRhythmBarsPainter.restingEnvelope,
     );
+    _targetBarHeights = List<double>.from(
+      _VerticalRhythmBarsPainter.restingEnvelope,
+    );
+    _waveformRepaintNotifier.value++;
     _sensorHealthNotifier.value = const SensorHealthReport(
       sampleCount: 0,
       requestedRateHz: 100.0,
@@ -385,6 +440,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
             _streamState = _RunStreamState.sensorError;
             _sensorErrorText = 'Sensor stream error: $error';
           });
+          _syncWaveformTicker();
         },
       );
 
@@ -395,12 +451,14 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
           _sensorErrorText = null;
         }
       });
+      _syncWaveformTicker();
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
         _streamState = _RunStreamState.sensorError;
         _sensorErrorText = 'Could not start accelerometer stream: $error';
       });
+      _syncWaveformTicker();
     }
   }
 
@@ -465,6 +523,10 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       }
       if (primaryOut.step != null) {
         _lastStepFlashAt = DateTime.now();
+        _stepFlashTimer?.cancel();
+        _stepFlashTimer = Timer(const Duration(milliseconds: 240), () {
+          if (mounted) setState(() {});
+        });
         if (_foregroundService.isServiceActive) {
           unawaited(
             _foregroundService.updateWorkoutService(
@@ -478,13 +540,15 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
           );
         }
       }
-      _updateSmoothedWaveformBars(
-        stepConfirmed: primaryOut.step != null,
-        isStationary: primaryOut.isStationary,
-      );
+      if (primaryOut.step != null || sample.sampleIndex % 3 == 0) {
+        _updateTargetWaveformBars(
+          stepConfirmed: primaryOut.step != null,
+          isStationary: primaryOut.isStationary,
+        );
+      }
     }
 
-    if (primaryOut?.step != null || sample.sampleIndex % 10 == 0) {
+    if (primaryOut?.step != null) {
       setState(() {});
     }
   }
@@ -551,6 +615,10 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         previousState == _RunStreamState.sensorError) {
       _streamState = previousState;
     }
+    for (var i = 0; i < _smoothedBarHeights.length; i++) {
+      _smoothedBarHeights[i] = _targetBarHeights[i];
+    }
+    _waveformRepaintNotifier.value++;
     _sensorHealthNotifier.value = RunMetricsCalculator.analyzeSensorHealth(
       samples: _activeSamples,
       requestedRateHz: 100.0,
@@ -564,6 +632,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
       setState(() {
         _streamState = _RunStreamState.paused;
       });
+      _syncWaveformTicker();
       unawaited(
         _foregroundService.updateWorkoutService(
           steps: _primaryDetections.length,
@@ -592,6 +661,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
         _streamState = _RunStreamState.running;
         _sensorErrorText = null;
       });
+      _syncWaveformTicker();
       _startElapsedTicker();
       unawaited(_foregroundService.requestNotificationPermission());
       unawaited(
@@ -627,6 +697,9 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
 
   Future<void> _finishRun() async {
     _elapsedTimer?.cancel();
+    if (_waveformTicker.isActive) {
+      _waveformTicker.stop();
+    }
     unawaited(_recordingService.stop());
     unawaited(_foregroundService.stopWorkoutService());
 
@@ -824,56 +897,68 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
     }
   }
 
-  /// Applies asymmetric spring attack/decay physics (fast upward attack on
-  /// foot-strike impact, smooth exponential decay between steps) so the 28
-  /// vertical equalizer bars move with physical inertia.
-  void _updateSmoothedWaveformBars({
+  /// Computes target heights for the 28 vertical equalizer bars directly from
+  /// recent magnitude samples with zero intermediate list allocation, letting
+  /// `_waveformTicker` interpolate them at smooth 60 FPS inside a RepaintBoundary.
+  void _updateTargetWaveformBars({
     required bool stepConfirmed,
     required bool isStationary,
   }) {
     const barCount = 28;
-    final mags = _recentMagnitudes.toList();
-    if (mags.isEmpty) return;
+    final len = _recentMagnitudes.length;
+    if (len == 0) return;
 
-    var minV = mags.first;
-    var maxV = mags.first;
-    for (final v in mags) {
+    var minV = _recentMagnitudes.first;
+    var maxV = _recentMagnitudes.first;
+    for (final v in _recentMagnitudes) {
       if (v < minV) minV = v;
       if (v > maxV) maxV = v;
     }
     final rawSpan = maxV - minV;
-    final isActuallyStill = isStationary || mags.length < 2 || rawSpan < 0.35;
+    final isActuallyStill = isStationary || len < 2 || rawSpan < 0.35;
 
-    const attackAlpha = 0.64; // Rapid upward response to foot strike
-    const decayAlpha = 0.22; // Smooth physical decay after impact
-
-    for (var i = 0; i < barCount; i++) {
-      final envelopeWeight = _VerticalRhythmBarsPainter.restingEnvelope[i];
-      double targetHeight;
-      if (isActuallyStill) {
-        targetHeight = (envelopeWeight * 0.35).clamp(0.10, 0.35);
-      } else {
-        final sampleIdx = ((i / (barCount - 1)) * (mags.length - 1)).round();
-        final sampleVal = mags[sampleIdx];
-        final span = math.max(5.0, rawSpan);
-        final dynamicRatio = ((sampleVal - minV) / span).clamp(0.12, 1.0);
-        final boost = stepConfirmed ? 1.18 : 1.0;
-        targetHeight =
-            ((dynamicRatio * 0.72 + envelopeWeight * 0.28) * boost).clamp(
-              0.14,
-              0.98,
-            );
+    if (isActuallyStill) {
+      for (var i = 0; i < barCount; i++) {
+        final envelopeWeight = _VerticalRhythmBarsPainter.restingEnvelope[i];
+        _targetBarHeights[i] = (envelopeWeight * 0.35).clamp(0.10, 0.35);
       }
+    } else {
+      final span = math.max(5.0, rawSpan);
+      final boost = stepConfirmed ? 1.18 : 1.0;
+      var idx = 0;
+      var nextTargetBar = 0;
 
-      final current = _smoothedBarHeights[i];
-      final alpha = targetHeight >= current ? attackAlpha : decayAlpha;
-      _smoothedBarHeights[i] = current + (targetHeight - current) * alpha;
+      for (final sampleVal in _recentMagnitudes) {
+        while (nextTargetBar < barCount) {
+          final desiredIdx =
+              ((nextTargetBar / (barCount - 1)) * (len - 1)).round();
+          if (desiredIdx != idx) break;
+          final envelopeWeight =
+              _VerticalRhythmBarsPainter.restingEnvelope[nextTargetBar];
+          final dynamicRatio = ((sampleVal - minV) / span).clamp(0.12, 1.0);
+          _targetBarHeights[nextTargetBar] =
+              ((dynamicRatio * 0.72 + envelopeWeight * 0.28) * boost).clamp(
+                0.14,
+                0.98,
+              );
+          nextTargetBar++;
+        }
+        if (nextTargetBar >= barCount) break;
+        idx++;
+      }
+    }
+
+    if (_streamState == _RunStreamState.running && !_waveformTicker.isActive) {
+      _waveformTicker.start();
     }
   }
 
   @override
   void dispose() {
     _elapsedTimer?.cancel();
+    _stepFlashTimer?.cancel();
+    _waveformTicker.dispose();
+    _waveformRepaintNotifier.dispose();
     _sensorHealthNotifier.dispose();
     _foregroundService.removeActionListener(_handleNotificationAction);
     unawaited(_foregroundService.stopWorkoutService());
@@ -986,11 +1071,8 @@ class _ActiveRunScreenState extends State<ActiveRunScreen> {
 
                             // 3. Hero Waveform Card (28px Deep Pebble, Vertical Rhythm Bars)
                             _AudioStrideVisualizerCard(
-                              magnitudes: _recentMagnitudes.toList(),
-                              thresholds: _recentThresholds.toList(),
-                              smoothedBarHeights: List<double>.unmodifiable(
-                                _smoothedBarHeights,
-                              ),
+                              smoothedBarHeights: _smoothedBarHeights,
+                              waveformRepaint: _waveformRepaintNotifier,
                               isRunning:
                                   _streamState == _RunStreamState.running,
                               isStationary:
@@ -1376,9 +1458,8 @@ class _StatusStateBanner extends StatelessWidget {
 /// to real-time 100 Hz foot-strike accelerometer magnitudes.
 class _AudioStrideVisualizerCard extends StatelessWidget {
   const _AudioStrideVisualizerCard({
-    required this.magnitudes,
-    required this.thresholds,
     required this.smoothedBarHeights,
+    required this.waveformRepaint,
     required this.isRunning,
     required this.isStationary,
     required this.stepFlashActive,
@@ -1388,9 +1469,8 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
     this.onCenterPlayTap,
   });
 
-  final List<double> magnitudes;
-  final List<double> thresholds;
   final List<double> smoothedBarHeights;
+  final Listenable waveformRepaint;
   final bool isRunning;
   final bool isStationary;
   final bool stepFlashActive;
@@ -1462,17 +1542,18 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   Positioned.fill(
-                    child: CustomPaint(
-                      painter: _VerticalRhythmBarsPainter(
-                        magnitudes: magnitudes,
-                        thresholds: thresholds,
-                        smoothedBarHeights: smoothedBarHeights,
-                        isRunning: isRunning,
-                        isStationary: isStationary,
-                        stepFlashActive: stepFlashActive && !reduceMotion,
-                        primaryColor: palette.accentCoral,
-                        secondaryColor: palette.accentViolet,
-                        restingColor: palette.textMuted.withValues(alpha: 0.25),
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _VerticalRhythmBarsPainter(
+                          smoothedBarHeights: smoothedBarHeights,
+                          repaint: waveformRepaint,
+                          isRunning: isRunning,
+                          isStationary: isStationary,
+                          stepFlashActive: stepFlashActive && !reduceMotion,
+                          primaryColor: palette.accentCoral,
+                          secondaryColor: palette.accentViolet,
+                          restingColor: palette.textMuted.withValues(alpha: 0.25),
+                        ),
                       ),
                     ),
                   ),
@@ -1581,19 +1662,16 @@ class _AudioStrideVisualizerCard extends StatelessWidget {
 /// envelope when paused/stationary.
 class _VerticalRhythmBarsPainter extends CustomPainter {
   const _VerticalRhythmBarsPainter({
-    required this.magnitudes,
-    required this.thresholds,
     required this.smoothedBarHeights,
+    required Listenable repaint,
     required this.isRunning,
     required this.isStationary,
     required this.stepFlashActive,
     required this.primaryColor,
     required this.secondaryColor,
     required this.restingColor,
-  });
+  }) : super(repaint: repaint);
 
-  final List<double> magnitudes;
-  final List<double> thresholds;
   final List<double> smoothedBarHeights;
   final bool isRunning;
   final bool isStationary;
@@ -1643,6 +1721,27 @@ class _VerticalRhythmBarsPainter extends CustomPainter {
     final spacing = size.width / barCount;
     final strokeWidth = (spacing * 0.46).clamp(3.0, 6.5);
 
+    // Pre-allocate paints and colors once per frame (zero heap churn per bar)
+    final trackPaint = Paint()
+      ..color = restingColor
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final baseOuterColor = Color.lerp(primaryColor, secondaryColor, 0.65)!;
+    final innerColor = isRunning
+        ? primaryColor
+        : primaryColor.withValues(alpha: 0.72);
+    final outerColor = isRunning
+        ? baseOuterColor
+        : baseOuterColor.withValues(alpha: 0.72);
+
+    final activePaint = Paint()
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final centerIndex = (barCount - 1) / 2;
+    final halfSpan = barCount / 2;
+
     for (var i = 0; i < barCount; i++) {
       final x = (i + 0.5) * spacing;
       final envelopeWeight = restingEnvelope[i];
@@ -1654,15 +1753,10 @@ class _VerticalRhythmBarsPainter extends CustomPainter {
                 : envelopeWeight * 0.35);
 
       final halfBar = math.max(4.0, normalizedHeight * maxHalfHeight);
-      final distanceFromCenter =
-          ((i - (barCount - 1) / 2).abs()) / (barCount / 2);
+      final distanceFromCenter = ((i - centerIndex).abs()) / halfSpan;
 
-      // Background subtle track bar (Reference 2 two-layer bar style)
+      // Background subtle track bar
       final trackHalf = math.max(halfBar + 4.0, envelopeWeight * maxHalfHeight);
-      final trackPaint = Paint()
-        ..color = restingColor
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round;
       canvas.drawLine(
         Offset(x, midY - trackHalf),
         Offset(x, midY + trackHalf),
@@ -1670,16 +1764,7 @@ class _VerticalRhythmBarsPainter extends CustomPainter {
       );
 
       // Foreground active rhythm bar with spring inertia
-      final activeColor = distanceFromCenter < 0.55
-          ? primaryColor
-          : Color.lerp(primaryColor, secondaryColor, 0.65)!;
-      final activePaint = Paint()
-        ..color = isRunning
-            ? activeColor
-            : activeColor.withValues(alpha: 0.72)
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round;
-
+      activePaint.color = distanceFromCenter < 0.55 ? innerColor : outerColor;
       canvas.drawLine(
         Offset(x, midY - halfBar),
         Offset(x, midY + halfBar),

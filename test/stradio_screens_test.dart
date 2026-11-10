@@ -769,4 +769,26 @@ void main() {
       expect(foregroundService.isServiceActive, isFalse);
     },
   );
+
+  test(
+    'ForegroundNotificationService bypasses throttle on Running <-> Paused state transition',
+    () {
+      final service = FlutterForegroundNotificationService();
+
+      // First update (Running at t = 1000ms) -> allowed
+      expect(service.shouldDispatchUpdate(true, 1000), isTrue);
+
+      // Same state update within 800ms (t = 1300ms) -> throttled
+      expect(service.shouldDispatchUpdate(true, 1300), isFalse);
+
+      // State transition to Paused within 800ms (t = 1350ms) -> MUST bypass throttle!
+      expect(service.shouldDispatchUpdate(false, 1350), isTrue);
+
+      // Same state update (Paused) within 800ms (t = 1500ms) -> throttled
+      expect(service.shouldDispatchUpdate(false, 1500), isFalse);
+
+      // State transition back to Running within 800ms (t = 1600ms) -> MUST bypass throttle!
+      expect(service.shouldDispatchUpdate(true, 1600), isTrue);
+    },
+  );
 }

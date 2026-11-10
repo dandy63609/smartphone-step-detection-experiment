@@ -84,6 +84,18 @@ class FlutterForegroundNotificationService
   bool _initialized = false;
   bool _active = false;
   int _lastUpdateTimestampMs = 0;
+  bool? _lastIsRunning;
+
+  @visibleForTesting
+  bool shouldDispatchUpdate(bool isRunning, int nowMs) {
+    final stateChanged = _lastIsRunning != isRunning;
+    if (!stateChanged && nowMs - _lastUpdateTimestampMs < 800) {
+      return false;
+    }
+    _lastUpdateTimestampMs = nowMs;
+    _lastIsRunning = isRunning;
+    return true;
+  }
 
   @override
   bool get isServiceActive => _active;
@@ -221,6 +233,7 @@ class FlutterForegroundNotificationService
         );
       }
       _active = true;
+      _lastIsRunning = isRunning;
       _lastUpdateTimestampMs = DateTime.now().millisecondsSinceEpoch;
     } catch (e) {
       debugPrint('Error starting foreground task: $e');
@@ -239,9 +252,7 @@ class FlutterForegroundNotificationService
     if (!_active || !_isAndroid) return;
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    // Throttle notification text updates to at most once per 800ms to preserve OS performance
-    if (now - _lastUpdateTimestampMs < 800) return;
-    _lastUpdateTimestampMs = now;
+    if (!shouldDispatchUpdate(isRunning, now)) return;
 
     final title = 'Stradio · ${isRunning ? "Running" : "Paused"} ($targetBpm BPM)';
     final text =
@@ -261,6 +272,7 @@ class FlutterForegroundNotificationService
   @override
   Future<void> stopWorkoutService() async {
     _active = false;
+    _lastIsRunning = null;
     if (!_isAndroid) return;
     try {
       if (await FlutterForegroundTask.isRunningService) {
