@@ -153,7 +153,7 @@ Stradio menolak penggunaan border garis abu-abu 1px kaku khas AI slop. Seluruh p
 
 ---
 
-## 4. Rencana Navigasi, Onboarding & Layar End-User (`v0.2.0` Roadmap) `[STATUS: PLANNING]`
+## 4. Rencana Navigasi, Onboarding & Layar End-User (`v0.2.0` Roadmap) `[STATUS: IN PROGRESS (MILESTONE 4 SELESAI)]`
 
 Pasca rilis `v0.1.7` (versi terakhir fase semi-eksperimen), Stradio bertransformasi menjadi aplikasi kebugaran untuk **pengguna akhir non-teknis** dengan arsitektur dwibahasa (**English** default + **Bahasa Indonesia**), kontrak visual pada `docs/DESIGN.md`, dan kontrak perilaku pada `docs/EXPERIENCE.md`.
 
@@ -220,24 +220,24 @@ Aplikasi dibungkus oleh **Root Shell Navigation** menggunakan bilah navigasi mel
 
 ---
 
-## 5. Roadmap Eksekusi (6 Milestone) `[STATUS: PARTIALLY DONE (M1-M3 SELESAI)]`
+## 5. Roadmap Eksekusi (6 Milestone) `[STATUS: PARTIALLY DONE (M1-M4 SELESAI)]`
 
 1. **Milestone 1 (SELESAI - Commit `9153502`):** Revamp UI `ActiveRunScreen` (`lib/screens/stradio/active_run_screen.dart`).
    - Hero Waveform Card dengan tombol Play melayang di tengah saat standby, Segmented Utility Pills (BPM, Placement, Algorithm), angka langkah Sora 68px, target langkah, dan secondary metrics card.
 2. **Milestone 2 (SELESAI - Commit `7da690f`):** Revamp UI `PostRunSummaryScreen` (`lib/screens/stradio/post_run_summary_screen.dart`).
-   - Header pencapaian ritmis, Stradio Signature Circular Rhythm Visualizer, matriks statistik latihan (Steps, Durasi, SPM, Speed, Jarak), grafik konsistensi ritme langkah, mini Scoreboard akurasi 4 algoritma (A1–B2), serta tombol aksi "Save & Finish Workout" non-blocking.
+   - Header pencapaian ritmis, Stradio Signature Circular Rhythm Visualizer, matriks statistik latihan (Steps, Durasi, SPM, Speed, Jarak), grafik konsistensi ritme langkah, mini Scoreboard akurasi 4 algoritma (A1-B2), serta tombol aksi "Save & Finish Workout" non-blocking.
 3. **Milestone 3 (SELESAI - Commit `7da690f`):** Revamp UI `SensorLabsSheet` (`lib/screens/stradio/sensor_labs_sheet.dart`).
    - Panel diagnostik biomekanika & instrumen laboratorium eksperimen: Toggle Developer Mode Live Overlay, diagnostik kesehatan sensor 100 Hz, kalibrasi Target Ground Truth, pemilih algoritma, ekspor dataset CSV lengkap, dan reset data sampel.
-4. **Milestone 4 (PLANNING):** `Onboarding`, `i18n (EN/ID)`, `RootNavigationShell` & `HomeScreen`.
-   - Implementasi First-Run Onboarding (privasi lokal, bahasa EN/ID, nama opsional fallback `"Runner"`, tinggi badan, target harian, toggle PostHog default ON), pemisahan penyimpanan summary vs raw samples, Floating Island 5-tab navigation (`stradio-reference-3-navigation.png` dengan label `"Run"`/`"Lari"`), serta `HomeScreen` dengan akumulasi langkah harian dan Quick Start.
+4. **Milestone 4 (SELESAI - Tahap 4A, 4B, 4C & 4D):** `Onboarding`, `i18n (EN/ID)`, `RootNavigationShell` & `HomeScreen`.
+   - Implementasi First-Run Onboarding 2 langkah (`lib/screens/stradio/onboarding_screen.dart`: privasi lokal, bahasa EN/ID, nama opsional fallback `"Runner"`, tinggi badan, target harian, toggle PostHog default ON), kamus lokalisasi modular per bahasa (`lib/l10n/`), pemisahan penyimpanan summary vs raw samples, Floating Island 5-tab navigation (`lib/screens/stradio/root_navigation_shell.dart` sesuai `stradio-reference-3-navigation.png` dengan label `"Run"`/`"Lari"` & Pre-Run Goal Selector Sheet), `HomeScreen` (`lib/screens/stradio/home_screen.dart`) dengan cincin progres akumulasi langkah harian dan Quick Start, serta penyembunyian elemen riset (`Labs`, badge `A1 Midpoint`, dan `4-Algorithm Scoreboard` di `PostRunSummaryScreen`) saat Developer Mode OFF.
 5. **Milestone 5 (PLANNING):** `LibraryScreen` & Integrasi Preset Tempo.
-   - Katalog tema bergaya aplikasi musik (*Chill Walk 110*, *Lo-Fi Pace 118*, *Tempo Jog 145*, *Neon Stride 165*, *Sprint Surge 180*) dengan filter chips, favorit, active soundscape bar, dan preview ritmis jujur yang siap disambungkan ke file audio tim.
+   - Ekstraksi dan pengayaan katalog tema bergaya aplikasi musik (*Chill Walk 110*, *Lo-Fi Pace 118*, *Tempo Jog 145*, *Neon Stride 165*, *Sprint Surge 180*) dengan filter chips, favorit, active soundscape bar, dan preview ritmis jujur yang siap disambungkan ke file audio tim.
 6. **Milestone 6 (PLANNING):** `ActivityScreen`, `SettingsScreen`, `Hidden Developer Mode` & Pembersihan Mode Konsumen.
-   - Jurnal riwayat `Activity` berbasis summary cepat, `SettingsScreen` dwibahasa, pemisahan tampilan konsumen vs Developer Mode (masuk via tap versi 7x, keluar via 1-switch OFF), serta penyederhanaan `ActiveRunScreen` (mesin utama `A1`, opsi *Remaining Daily Target* vs *Open Goal*) dan `PostRunSummaryScreen` saat Developer Mode OFF.
+   - Pengayaan jurnal riwayat `Activity` dengan grafik tren mingguan dan filter, `SettingsScreen` dwibahasa lengkap (edit profil nama/tinggi badan/target harian, panduan baterai Android, clear workout history), serta penyempurnaan panel `Developer & Research Tools` (akses langsung ke CSV export dan `LegacyExperimentShell`).
 
 ---
 
-## 6. Protokol Integritas Eksperimen & Performa Sistem `[STATUS: DONE - 24/24 TESTS PASSED]`
+## 6. Protokol Integritas Eksperimen & Performa Sistem `[STATUS: DONE - 46/46 TESTS PASSED]`
 
 Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh **integritas riset dan metodologi ilmiah tetap terjaga 100%**:
 

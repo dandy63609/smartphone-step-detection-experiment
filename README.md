@@ -1,37 +1,54 @@
-# Smartphone Step Detection Experiment
+# Stradio: Smartphone Step Detection & Reactive Sports-Music App
 
-A research-grade Flutter application comparing adaptive-threshold step-detection algorithms (**Adaptive Midpoint** and **Mean + $k\cdot\text{SD}$**) across both **Raw Accelerometer (with gravity)** and **User/Linear Accelerometer (without gravity)** streams for walking and jogging activities under different phone placements (hand vs. pocket).
+**Stradio** (*"Stride + Audio: Movement Becomes Music"*) is a dual-mode Flutter application combining a consumer-friendly **reactive running & walking companion (`v0.2.0`)** with a full-featured **biomechanical step-detection research laboratory**.
 
-Every trial is calibrated against a standardized **100 physical steps** ground truth ($N_{\text{true}} = 100$).
+Under the hood, Stradio processes real-time 100 Hz smartphone accelerometer streams and compares adaptive-threshold step-detection algorithms (**Adaptive Midpoint** and **Mean + $k\cdot\text{SD}$**) across both **Raw Accelerometer (with gravity)** and **User/Linear Accelerometer (without gravity)** streams for walking and jogging activities under different phone placements (`hand` vs. `pocket`).
 
 ---
 
 ## Key Features
 
-- **4-Algorithm Simultaneous Benchmark (A1, A2, B1, B2):**
-  One physical 100-step session records synchronized dual sensor streams at 100 Hz and evaluates all 4 algorithm combinations side-by-side:
+### 1. Consumer Experience (`v0.2.0` Default Mode)
+- **Zero-Account Local-First Onboarding (2 Steps):**
+  - **Step 1 (Welcome & Privacy):** 100% local profile and workout storage promise with live **English** (default) and **Bahasa Indonesia** language switching.
+  - **Step 2 (Quick Personalization):** Optional nickname (with 1-tap `Skip` defaulting to `"Runner"`), optional height in cm (`100-240 cm`) for personalized stride-length calibration, Daily Step Goal presets (`3,000`, `5,000`, `8,000`, `10,000`, custom input, or `Open Goal`), and a transparent **Anonymous Performance Stats (PostHog)** opt-out toggle.
+- **Floating Island 5-Slot Navigation Shell:**
+  - Persistent bottom navigation capsule (`Home`, `Library`, elevated `Sonic Coral` center `Run` / `Lari` action button, `Activity`, and `Settings`) built exclusively with official Flutter Material vector icons.
+  - **Contextual Pre-Run Goal Selector Sheet:** When using a Daily Step Goal, tapping `Run` lets the user choose between **Continue Daily Target** (automatically targeting the remaining steps for today) or **Open Goal (Free Run)**.
+- **Runner Home Screen & Same-Day Step Accumulation:**
+  - Asymmetric two-tone greeting header with Light/Dark theme toggle (`Warm Ivory` Light Mode and `Deep Obsidian` Night Run Mode).
+  - **Daily Goal Hero Card** with an animated circular progress ring (`450 ms`), celebratory goal-reached banner, and accumulated daily `Steps`, `Distance (km)`, and `Active Time` across all sessions recorded on the same calendar day.
+  - **Active Soundscape Strip & Quick Start Presets:** 1-tap launch into *Lo-Fi Pace (118 BPM)*, *Tempo Jog (145 BPM)*, or *Neon Stride (165 BPM)*.
+- **Storage-Optimized Consumer Sessions:**
+  - When **Developer Mode is OFF**, completed workouts save lightweight ~1 KB summary JSON files (preserving step counts, duration, target BPM, and cadence consistency buckets while stripping raw 100 Hz sensor arrays) so history loading is instant.
+- **Resilient Lifecycle & Lockscreen Controls:**
+  - Incremental active-session crash recovery cache (`.temp_active_run.json`) and Android Foreground Service (`flutter_foreground_task`) with interactive lockscreen `Pause / Resume` and `Finish` controls.
+
+### 2. Hidden Developer & Research Laboratory Mode
+- **7-Tap Unlock & 1-Tap Exit:**
+  - Tap **`Stradio v0.2.0`** 7 times at the bottom of the `Settings` tab to unlock the **`Developer & Research Tools`** card. Flip the top **`Developer Mode`** switch OFF anytime to return immediately to the clean consumer UI.
+- **4-Algorithm Simultaneous Benchmark (`A1`, `A2`, `B1`, `B2`):**
+  - When Developer Mode is ON, each trial records full 100 Hz dual sensor streams and evaluates all 4 algorithm variants side-by-side against a standardized **100 physical steps** ground truth ($N_{\text{true}} = 100$):
+
   | Code | Threshold Algorithm | Sensor Input Stream | Description |
   | :---: | :--- | :--- | :--- |
-  | **A1** | **Adaptive Midpoint** $\frac{\max + \min}{2}$ | Raw Accelerometer (+Gravity) | Baseline adaptive midpoint with gravity ($\approx 9.8\ \text{m/s}^2$). |
+  | **A1** | **Adaptive Midpoint** $\frac{\max + \min}{2}$ | Raw Accelerometer (+Gravity) | Primary consumer & baseline adaptive midpoint with gravity ($\approx 9.81\ \text{m/s}^2$). |
   | **A2** | **Adaptive Midpoint** $\frac{\max + \min}{2}$ | User Accelerometer (Linear -Gravity) | Tests whether gravity removal stabilizes the dynamic midpoint. |
   | **B1** | **Mean + $k\cdot\text{SD}$** ($\mu + k\sigma$) | Raw Accelerometer (+Gravity) | Statistical deviation threshold on raw magnitude. |
   | **B2** | **Mean + $k\cdot\text{SD}$** ($\mu + k\sigma$) | User Accelerometer (Linear -Gravity) | Statistical deviation threshold on pure linear acceleration. |
+
 - **Stationary Noise Gate (`minWindowSpreadMps2 = 1.2` $\text{m/s}^2$):**
-  Prevents thermal/MEMS micro-noise ($\approx \pm 0.03\ \text{m/s}^2$) from triggering false step counts when the smartphone rests stationary on a table, while locking the live chart's minimum vertical span (`6.0` $\text{m/s}^2$) so idle signals appear as a steady flat line.
-- **Google Material Design 3 UI (Google Fit / Health Connect Style):**
-  Clean tonal surfaces, `SegmentedButton` factor controls, circular step progress gauge with pulse animation, real-time $m(t)$ & $T(t)$ telemetry, and an instant 4-way **Scoreboard** classifying each detector (`Akurat`, `Overcounting`, `Undercounting`).
-- **Complete CSV Dataset Export:**
-  One-tap native sharing of `sensor_data.csv`, `sensor_linear_data.csv`, and `evaluation_summary.csv`.
-- **Automated CI/CD & Slim APK Releases:**
-  GitHub Actions workflows for Gitleaks secret scanning, `flutter analyze`, `flutter test`, and automatic `--split-per-abi` slim APK (~15 MB) publishing to GitHub Releases.
+  - Prevents thermal/MEMS micro-noise ($\approx \pm 0.03\ \text{m/s}^2$) from triggering false steps when the phone rests stationary on a table.
+- **Sensor Labs & Complete CSV Dataset Export:**
+  - Live 100 Hz telemetry overlay, 4-Algorithm Replay Scoreboard on `PostRunSummaryScreen`, and 1-tap native sharing of `sensor_data.csv`, `sensor_linear_data.csv`, and `evaluation_summary.csv`.
 
 ---
 
-## Installation
+## Installation & Running
 
 Ensure you have the [Flutter SDK](https://docs.flutter.dev/get-started/install) installed (Dart `^3.11.0+`).
 
-Clone the repository and install dependencies:
+1. Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/dandy63609/smartphone-step-detection-experiment.git
@@ -39,162 +56,111 @@ cd smartphone-step-detection-experiment
 flutter pub get
 ```
 
-Run on a physical Android device:
+2. Run on a physical Android device (optionally supplying local environment variables via `.env`):
 
 ```bash
-flutter run
+flutter run --dart-define-from-file=.env
 ```
 
 Or download the latest pre-built **`step-detection-v*-arm64-v8a.apk`** directly from the repository's **GitHub Releases** page.
 
 ---
 
-## In-App Experimental Workflow
+## Project Architecture
 
-1. **Dashboard:** Displays pilot progress across the 8 factorial conditions (**E1–E8**), targeting 5 repetitions per condition (40 physical recordings total).
-2. **Setup:** Select participant ID (`P01`), activity (`walking` / `jogging`), placement (`hand` / `pocket`), and the primary live algorithm using Material 3 segmented controls.
-3. **Live Recording:**
-   - 3-second preparation countdown.
-   - Google Fit-style circular step counter gauge, visual pulse animation, and progress toward 100 steps.
-   - Live waveform chart rendering acceleration magnitude $m(t)$, dynamic threshold $T(t)$, motion status (`Stationary (Idle)` vs `Motion Active`), and confirmed step peaks.
-   - Manual **"Stop (100 Steps Completed)"** trigger.
-4. **Trial Evaluation & 4-Algorithm Scoreboard:**
-   - Automatic verification that live step counts match offline replay.
-   - **4-Algorithm Scoreboard (A1, A2, B1, B2)** comparing detected steps, signed step difference, Margin of Error (%), and status (`Akurat`, `Overcounting`, `Undercounting`).
-5. **Export Datasets:** One-tap native sharing of `sensor_data.csv`, `sensor_linear_data.csv`, and `evaluation_summary.csv`.
+```text
+lib/
+├── algorithms/       # Causal moving average, rolling window stats, A1/A2/B1/B2 StepDetector
+├── evaluation/       # 100-step ground-truth evaluation & height-calibrated RunMetricsCalculator
+├── l10n/             # Compile-time verified bilingual strings (EN default + Bahasa Indonesia)
+├── models/           # StradioUserProfile, ExperimentConfig, SensorSample, SavedRecording
+├── screens/
+│   ├── stradio/      # Consumer & Hybrid UI: Onboarding, RootNavigationShell, HomeScreen,
+│   │                 # ActiveRunScreen, PostRunSummaryScreen, SensorLabsSheet
+│   └── ...           # Legacy E1-E8 Research Matrix screens (Dashboard, Setup, Live, Results, Export)
+├── services/         # Accelerometer stream, RecordingStore, Preferences, PostHog, Foreground task
+├── theme/            # StradioTheme tokens (Warm Ivory Light & Deep Obsidian Dark, 100% borderless)
+└── widgets/          # Official Stradio topographical ribbon logo & waveform badges
+```
 
 ---
 
 ## Glossary & Biomechanical-Audio Concepts
 
-A comprehensive reference for developers, researchers, and collaborators explaining all technical terms, biomechanical metrics, signal processing pipelines, and audio-stride engine concepts used in the repository:
-
 ### 1. Biomechanical & Motion Dynamics
 
 - **SPM (Steps Per Minute / Cadence):**
-  The physical frequency of foot strikes per minute executed by the runner or walker. Calculated in real time over rolling time windows from peak-to-peak step intervals.
-  $$\text{SPM} = \frac{60}{\Delta t_{\text{step}}(\text{seconds})}$$
+  The physical frequency of foot strikes per minute executed by the runner or walker, calculated over a rolling time window from peak-to-peak step intervals:
+  $$\text{SPM} = \frac{60}{\Delta t_{\text{step}}}$$
 - **Ground Truth 100 Steps ($N_{\text{true}} = 100$):**
-  The fixed physical benchmark used for all trials. The participant performs exactly 100 physical steps counted manually and confirmed upon stopping. Because $N_{\text{true}} = 100$, any error count translates directly to a percentage without scaling:
-  $$\text{Margin of Error (\%)} = |N_{\text{predicted}} - 100|\%$$
+  The fixed physical benchmark used for controlled research trials. Because $N_{\text{true}} = 100$, any step count deviation translates directly to a percentage margin of error:
+  $$\text{Margin of Error} = \lvert N_{\text{predicted}} - 100 \rvert$$
 - **Phone Placement (`hand` vs. `pocket`):**
-  Standardized carrying locations. Hand-held simulates typical smartphone use with arm swing dynamics; pocket placement isolates hip and leg translation while damping rotational noise.
-- **Estimated Running Speed:**
-  Cadence-driven instantaneous velocity approximation ($v = \text{SPM} \times \text{stride\_length}$) calibrated for walking ($\approx 0.65\ \text{m/step}$) and jogging ($\approx 0.90\ \text{m/step}$).
+  Standardized carrying locations. Hand-held captures arm swing dynamics; pocket placement isolates hip and leg translation.
+- **Height-Calibrated Stride Length & Estimated Running Speed:**
+  Instantaneous speed is approximated from cadence and stride length ($L_{\text{stride}}$):
+  $$v = \text{SPM} \times L_{\text{stride}}$$
+  When the user provides height ($h_{\text{cm}} \in [100, 240]\ \text{cm}$), stride length is calibrated as $L_{\text{walk}} = 0.00415 \times h_{\text{cm}}$ and $L_{\text{jog}} = 0.0055 \times h_{\text{cm}}$ (falling back to $0.74\ \text{m}$ for walking and $0.95\ \text{m}$ for jogging when unset).
 
-### 2. Audio-Stride & Music Engine
+### 2. Audio-Stride & Soundscape Catalog
 
 - **BPM (Beats Per Minute / Music Tempo):**
-  The musical tempo of the synthesizer or audio track. Stradio couples BPM to physical cadence so music tempo tracks runner stride.
-- **Audio-Stride Reactive Engine:**
-  The proprietary closed-loop system where IMU sensor step events dynamically synchronize audio tempo, triggering reactive drum beats and synthesizer pulses locked to foot-strike impacts ($\text{BPM} \approx \text{SPM}$).
-- **Soundscape Presets:**
-  Pre-composed reactive audio environments calibrated to specific cadence envelopes:
-  - **Lo-Fi Pace (118 BPM):** Relaxed cadence for warm-ups and brisk walking (110–125 SPM).
-  - **Tempo Jog (145 BPM):** Mid-intensity endurance jogging (140–155 SPM).
-  - **Neon Stride (165 BPM):** High-cadence rhythmic running preset (160–175 SPM).
-  - **Cyber Cadence (180 BPM):** High-efficiency athletic cadence for 5K/10K pacing.
+  The musical tempo of the active soundscape. Stradio compares the runner's real-time cadence ($\text{SPM}$) against target $\text{BPM}$ to compute the **Rhythm Score (0-100%)**.
+- **Curated Soundscape Themes:**
+  - **Chill Walk (110 BPM):** Easy morning stroll and steady breathing.
+  - **Lo-Fi Pace (118 BPM):** Brisk city walk and warm-up groove.
+  - **Tempo Jog (145 BPM):** Balanced endurance cadence for steady jogging.
+  - **Neon Stride (165 BPM):** High-energy synth pulse for responsive running.
+  - **Sprint Surge (180 BPM):** Peak-cadence drive for fast intervals.
 
 ### 3. Signal Processing & Sensor Telemetry
 
 - **3-Axis Raw Accelerometer ($a_x, a_y, a_z$):**
-  Tri-axial acceleration in $\text{m/s}^2$ including gravity vector ($\approx 9.81\ \text{m/s}^2$ when stationary).
+  Tri-axial acceleration in $\text{m/s}^2$ including Earth gravity ($\approx 9.81\ \text{m/s}^2$ at rest).
 - **Linear / User Accelerometer ($u_x, u_y, u_z$):**
-  Acceleration in $\text{m/s}^2$ with earth gravity computationally removed via device sensor-fusion algorithms.
+  Acceleration in $\text{m/s}^2$ with gravity removed.
 - **Euclidean Vector Norm / Magnitude ($m(t)$):**
   Orientation-independent scalar total acceleration:
   $$m(t) = \sqrt{a_x(t)^2 + a_y(t)^2 + a_z(t)^2}$$
 - **Causal Moving-Average Filter:**
-  Low-pass smoothing filter using strictly past and present samples (3-sample window) to remove high-frequency MEMS jitter without introducing look-ahead bias:
+  Low-pass smoothing filter using strictly past and current samples ($N = 3$) without look-ahead bias:
   $$s(t) = \frac{1}{N}\sum_{i=0}^{N-1} m(t - i)$$
 - **Rolling Threshold Window ($T_w = 1000\ \text{ms}$):**
-  A 1-second sliding memory buffer of smoothed magnitude values used to calculate the real-time threshold $T(t)$.
-- **Stationary Noise Gate (`minWindowSpreadMps2 = 1.2` $\text{m/s}^2$):**
-  Safety threshold spread ($\max - \min$). If acceleration variation inside the 1-second window is less than $1.2\ \text{m/s}^2$ (e.g. resting on a desk or holding still), step detection is locked and the waveform renders as a flat line to eliminate false counts from micro-vibrations.
-- **Refractory Lockout Period (250 ms):**
-  Minimum physiological duration between consecutive foot strikes ($\le 240\ \text{SPM}$). Peaks occurring within 250 ms of an accepted step are rejected as secondary bounces or arm swings.
-- **Valley Confirmation & Hysteresis:**
-  Before a new peak can be accepted, the smoothed magnitude signal must drop below a valley threshold, ensuring the gait cycle enters the swing/flight phase before the next foot impact.
+  A 1-second sliding buffer of smoothed magnitude values used to compute the dynamic threshold $T(t)$.
+- **Refractory Lockout Period ($250\ \text{ms}$) & Valley Confirmation:**
+  Enforces a minimum physiological interval between steps ($\le 240\ \text{SPM}$) and requires the signal to dip below a valley threshold before confirming the next step peak.
 
-### 4. 4-Algorithm Matrix (A1, A2, B1, B2)
+### 4. 4-Algorithm Matrix (`A1`, `A2`, `B1`, `B2`)
 
-- **A1 — Adaptive Midpoint (Raw):**
+- **A1 - Adaptive Midpoint (Raw):**
   $$T(t) = \frac{\max(\text{window}) + \min(\text{window})}{2}$$
-  Computed over raw accelerometer magnitude ($+g$). Rapidly adapts to changes in vertical amplitude.
-- **A2 — Adaptive Midpoint (Linear):**
-  Same midpoint formula applied to linear acceleration ($-g$). Evaluates whether eliminating gravity baseline reduces posture-tilt artifacts.
-- **B1 — Mean + $k\cdot\text{SD}$ (Raw):**
+  Computed over raw accelerometer magnitude ($+g$). Used as the primary live step detector in consumer mode.
+- **A2 - Adaptive Midpoint (Linear):**
+  Same midpoint formula applied to linear acceleration ($-g$).
+- **B1 - Mean + $k\cdot\text{SD}$ (Raw):**
   $$T(t) = \mu(\text{window}) + k \cdot \sigma(\text{window}),\quad k = 1.5$$
-  Statistical threshold requiring foot strikes to exceed the mean by $1.5$ standard deviations. Resilient against gradual drift.
-- **B2 — Mean + $k\cdot\text{SD}$ (Linear):**
-  Statistical deviation threshold on pure linear acceleration.
+  Statistical threshold requiring foot strikes to exceed the window mean by $1.5$ standard deviations.
+- **B2 - Mean + $k\cdot\text{SD}$ (Linear):**
+  Statistical deviation threshold on pure linear acceleration ($-g$).
 
 ### 5. Evaluation Metrics & Classifications
 
 - **Absolute Step Error:**
-  $$\text{Absolute Error} = |N_{\text{predicted}} - N_{\text{true}}| = |N_{\text{predicted}} - 100|$$
-- **Percentage Margin of Error:**
-  $$\text{Margin of Error (\%)} = \left(\frac{|N_{\text{predicted}} - 100|}{100}\right) \times 100\% = |N_{\text{predicted}} - 100|\%$$
+  $$\text{Absolute Error} = \lvert N_{\text{predicted}} - N_{\text{true}} \rvert = \lvert N_{\text{predicted}} - 100 \rvert$$
+- **Percentage Margin of Error (out of 100 steps):**
+  $$\text{Margin of Error} = \frac{\lvert N_{\text{predicted}} - 100 \rvert}{100} \times 100 = \lvert N_{\text{predicted}} - 100 \rvert$$
 - **Step Count Accuracy:**
-  $$\text{Accuracy (\%)} = \max\left(0, 100\% - \text{Margin of Error (\%)}\right)$$
+  $$\text{Accuracy} = \max(0,\ 100 - \text{Margin of Error})$$
 - **Scoreboard Performance Classification:**
-  - **`Akurat` (Accurate):** $\text{Margin of Error} \le 3.0\%$ (97 to 103 detected steps).
-  - **`Overcounting`:** $N_{\text{predicted}} > 103$ steps (detector too sensitive or counting bounces).
-  - **`Undercounting`:** $N_{\text{predicted}} < 97$ steps (threshold too high or missed foot strikes).
-
-### 6. Telemetry & Export Schema
-
-- **PostHog Cloud Telemetry:**
-  Structured product events (`run_started`, `run_paused`, `run_resumed`, `step_milestone_reached`, `run_completed`) providing cohort tracking and latency metrics.
-- **`sensor_data.csv`:**
-  High-frequency 100 Hz timeseries logging `recording_id`, `sample_index`, `timestamp_ns`, `activity`, `phone_placement`, raw axes ($a_x, a_y, a_z$), and Euclidean magnitude.
-- **`evaluation_summary.csv`:**
-  Trial-level performance benchmark comparing predicted steps against 100 ground truth steps for each algorithm variant.
-
----
-
-## Dart API & Algorithmic Signal Processing
-
-```dart
-import 'package:smartphone_step_detection_experiment/algorithms/step_detector.dart';
-import 'package:smartphone_step_detection_experiment/evaluation/step_count_evaluation.dart';
-import 'package:smartphone_step_detection_experiment/models/experiment_models.dart';
-
-// Shared algorithm parameters
-const params = AlgorithmParameters(
-  smoothingSamples: 3,         // causal moving-average window
-  windowDurationMs: 1000,      // rolling threshold window duration
-  minimumStepIntervalMs: 250,  // refractory lockout
-  k: 1.5,                      // used by Mean + k·SD algorithm
-  minWindowSpreadMps2: 1.2,    // stationary MEMS noise gate
-);
-
-// Instantiate streaming detector for live acceleration events
-final detector = StepDetector(
-  algorithm: ThresholdAlgorithm.adaptiveMidpoint,
-  parameters: params,
-);
-
-// Feed samples in real time (returns output with step event when confirmed)
-for (final sample in sensorStream) {
-  final output = detector.addSample(sample);
-  if (output.step != null) {
-    print('Step detected at ${output.step!.peakTimestampNs} ns!');
-  }
-}
-
-// Replay all 4 combinations (A1, A2, B1, B2) offline over recorded samples
-final allFourDetections = StepDetector.replayAllFour(recordedSamples, params);
-for (final entry in allFourDetections.entries) {
-  print('${entry.key.code} (${entry.key.displayName}): ${entry.value.length} steps');
-}
-```
+  - **`Akurat` (Accurate):** $\text{Margin of Error} \le 3.0$ ($97$ to $103$ detected steps).
+  - **`Overcounting`:** $N_{\text{predicted}} > 103$ steps.
+  - **`Undercounting`:** $N_{\text{predicted}} < 97$ steps.
 
 ---
 
 ## Running Tests
 
-Run the test suite including vector magnitude checks (raw & linear), rolling window statistics, peak detection state machine, 30-second stationary table noise test, exact CSV schema tests, and the synthetic 100-peak signal fixture across all 4 variants:
+Run static analysis and the full automated test suite (46 unit and widget tests covering signal processing, height-calibrated stride metrics, summary-only vs. raw storage, bilingual localization, 2-step onboarding, 5-slot floating navigation shell, `HomeScreen` daily accumulation, and full 4-screen research workflows):
 
 ```bash
 flutter analyze
