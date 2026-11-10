@@ -27,12 +27,13 @@ Stradio adalah aplikasi kebugaran generasi baru yang menyelaraskan setiap langka
 
 ## 2. Acuan Desain Resmi (Visual References) `[STATUS: DONE]`
 
-Arsitektur UI Stradio mengacu pada dua referensi visual utama yang disimpan di repositori:
+Arsitektur UI Stradio mengacu pada tiga referensi visual utama yang disimpan di repositori, serta dirinci kontrak visual dan pengalamannya pada `docs/DESIGN.md` dan `docs/EXPERIENCE.md`:
 
 ```
 assets/images/
-├── stradio-reference-1.png   (Referensi 1: Ergonomi Layar Player & Library List)
-└── stradio-reference-2.png   (Referensi 2: Hero Waveform Center Play & Floating Navigation)
+├── stradio-reference-1.png             (Referensi 1: Ergonomi Layar Player & Library List)
+├── stradio-reference-2.png             (Referensi 2: Hero Waveform Center Play & Floating Navigation)
+└── stradio-reference-3-navigation.png  (Referensi 3: Variasi Floating Island Bottom Navigation)
 ```
 
 ### Referensi 1: `stradio-reference-1.png` (Dribbble Audio & Sports Companion)
@@ -152,71 +153,87 @@ Stradio menolak penggunaan border garis abu-abu 1px kaku khas AI slop. Seluruh p
 
 ---
 
-## 4. Rencana Navigasi & Layar Masa Depan (MVP Roadmap) `[STATUS: PLANNING]`
+## 4. Rencana Navigasi, Onboarding & Layar End-User (`v0.2.0` Roadmap) `[STATUS: PLANNING]`
 
-Untuk mempersiapkan aplikasi saat *reactive beat & melody generator* diintegrasikan, aplikasi akan dibungkus dengan **Root Shell Navigation** yang menggunakan bilah navigasi melayang (*Floating Island Bottom Navigation* sesuai Referensi 2) dengan struktur **5-Tab Gold Standard**:
+Pasca rilis `v0.1.7` (versi terakhir fase semi-eksperimen), Stradio bertransformasi menjadi aplikasi kebugaran untuk **pengguna akhir non-teknis** dengan arsitektur dwibahasa (**English** default + **Bahasa Indonesia**), kontrak visual pada `docs/DESIGN.md`, dan kontrak perilaku pada `docs/EXPERIENCE.md`.
+
+### 4.1 First-Run Onboarding (Tanpa Login / OAuth)
+Pengguna baru langsung disambut alur onboarding singkat 2 langkah sebelum memasuki `Home`:
+1. **Welcome & Local Privacy Promise:** Penjelasan ramah bahwa seluruh data profil pribadi (nama panggilan, tinggi badan, riwayat olahraga) disimpan **100% lokal di perangkat** tanpa akun atau login. Pilihan bahasa (`English` default / `Bahasa Indonesia`) tersedia sejak awal.
+2. **Quick Personalization:**
+   - **Nama Panggilan:** Opsional dengan tombol **Skip** (otomatis memakai nama default `"Runner"` untuk sapaan di `Home`).
+   - **Tinggi Badan (cm):** Opsional untuk kalibrasi estimasi panjang langkah dan jarak (fallback ke standar `0.74 m / 0.95 m`).
+   - **Target Langkah Harian:** Pilihan preset cepat atau input angka custom, serta opsi mode *Open Goal*.
+   - **Anonymous Telemetry Toggle (PostHog):** Default **ON** dengan toggle yang dapat dimatikan langsung dan penjelasan transparan bahwa hanya metrik performa & penggunaan anonim yang dikirim (nama dan file sensor mentah tidak pernah dikirim). Project API key disuntikkan saat build melalui `--dart-define=POSTHOG_API_KEY` (GitHub Secrets + `.env` lokal yang di-ignore Git), bukan di-hardcode di repositori.
+
+### 4.2 Root Navigation Shell (Floating Island 5-Slot per Referensi 3)
+Aplikasi dibungkus oleh **Root Shell Navigation** menggunakan bilah navigasi melayang (*Floating Island Bottom Navigation* mengacu pada `stradio-reference-3-navigation.png` varian baris kanan bawah):
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │                                                               │
 │                   KONTEN LAYAR YANG AKTIF                     │
-│                                                               │
+│        (Dengan bottom scroll clearance agar tidak tertutup)   │
 ├───────────────────────────────────────────────────────────────┤
 │    ┌─────────────────────────────────────────────────────┐    │
-│    │   🏠         🎵          ╭─────╮         📊        ⚙️   │    │
-│    │  Home     Library         │ RUN │      Activity  Settings│    │
+│    │  [Home]    [Music]        ╭─────╮       [Chart]   [Gear]│
+│    │  Home     Library         │  ▶  │      Activity  Settings│    │
 │    │                           ╰─────╯                   │    │
+│    │                             Run                     │    │
 │    └─────────────────────────────────────────────────────┘    │
 └───────────────────────────────────────────────────────────────┘
 ```
 
-### 5 Bagian Utama Navigasi (Kiri ke Kanan):
+### 4.3 Rincian 5 Bagian Utama Navigasi & Layar Pendukung (Kiri ke Kanan):
 
-#### 1. Tab `Home` (Dashboard & Penemuan)
-- **Header Asimetris:** Sapaan modern (*"Good Morning / Find Your Rhythm"*) dengan profil avatar mini dan indikator status kesiapan sensor IMU.
-- **Kartu Ringkasan:** Rekap capaian lari mingguan, *quick stats*, dan skor konsistensi ritme terakhir.
-- **Quick Start Actions:** Pilihan preset lari cepat (100 Langkah Fisik, Brisk Walk 118 BPM, Tempo Jog 145 BPM).
+#### 1. Tab `Home` (Dashboard Pelari)
+- **Header Asimetris (Referensi 2):** Sapaan personal dwibahasa (*"Hello again, [Nama]"* / *"Halo lagi, [Nama]"*) bersama tombol cepat pengubah tema Light/Dark.
+- **Kartu Progres Harian Akumulatif:** Menampilkan total langkah akumulatif pada hari kalender berjalan dibanding target harian (atau ringkasan bebas jika *Open Goal*), jarak tempuh nyata, dan waktu aktif hari ini.
+- **Quick Start Actions:** Kartu pintas non-teknis (*Brisk Walk 118 BPM*, *Tempo Jog 145 BPM*, *Neon Stride 165 BPM*) yang langsung membuka sesi lari aktif.
 
-#### 2. Tab `Library` (Koleksi Tema Musik Reaktif)
-- Mengadopsi struktur kartu vertikal dan horizontal dari **Referensi 1 (Layar 2 & 3)**.
-- Katalog tema soundscape reaktif yang menyesuaikan ketukan dengan langkah kaki:
-  - **Neon Stride (165 BPM):** Synthwave berenergi tinggi untuk jogging cepat.
-  - **Lo-Fi Pace (118 BPM):** Beat santai untuk jalan santai dan pemanasan.
-  - **Cyber Cadence (145 BPM):** Ketukan ritmis elektronik untuk lari jarak jauh tempo stabil.
-- Setiap kartu memiliki preview audio, filter genre/tempo, dan tombol favorit.
+#### 2. Tab `Library` (Katalog Tema Soundscape Bergaya Aplikasi Musik)
+- Mengadopsi layout daftar kartu musik modern dari **Referensi 1 (Layar 2 & 3)** dengan filter chips tempo di atas (`All`, `Chill`, `Jog`, `Fast`, `Favorites`).
+- Berfungsi sebagai **placeholder siap audio** dengan daftar tema (*Chill Walk 110 BPM*, *Lo-Fi Pace 118 BPM*, *Tempo Jog 145 BPM*, *Neon Stride 165 BPM*, *Sprint Surge 180 BPM*).
+- Setiap baris memiliki thumbnail artwork/gelombang, nama tema, deskripsi vibe, badge BPM, tombol **Favorit**, dan tombol **Preview** jujur (memicu animasi gelombang + status bahwa file audio tim segera diintegrasikan sambil mengaktifkan tempo tersebut untuk sesi lari).
 
-#### 3. Center Elevated Action: `( RUN )` (Tombol Aksi Utama)
-- **Desain & Ergonomi:** Berada tepat di tengah bilah navigasi bawah, berukuran lebih besar (56–64px), sedikit menonjol melayang (*elevated floating action button*), dan berwarna **Sonic Coral (`#FF765F`)**.
-- **Fungsi:** Merupakan pemicu aksi cepat instan (*instant primary CTA*) yang paling mudah dijangkau jempol satu tangan. Menekan tombol ini langsung membuka sesi lari aktif (`ActiveRunScreen`) untuk mulai melangkah.
+#### 3. Center Elevated Action: `( RUN )` -> `ActiveRunScreen` (Full-Screen)
+- **Desain & Ergonomi (Referensi 3):** Lingkaran menonjol berwarna **Sonic Coral (`#FF765F`)** di tengah bilah navigasi bawah dengan **label teks kecil `"Run"` / `"Lari"`** di bawah lingkaran.
+- **Alur Target Sesi:** Jika pengguna memakai *Daily Target*, menekan `( RUN )` menawarkan opsi cepat **Continue Daily Target** (melanjutkan sisa target langkah hari ini) atau **Open Goal** (tanpa batas). Jika target tercapai di tengah jalan, sesi tetap berjalan mulus tanpa berhenti paksa.
+- **Mesin Deteksi & UI Bersih:** Menggunakan **`A1 (Adaptive Midpoint Raw)`** sebagai penghitung langkah konsumen utama. Membuka `ActiveRunScreen` secara full-screen (tanpa bottom nav). Tombol `Labs` serta kode `A1`/`B1` disembunyikan sepenuhnya saat Developer Mode OFF.
+- **Post-Run (`PostRunSummaryScreen`):** Versi konsumen menampilkan Steps, Duration, Cadence, Distance, Rhythm Score, dan grafik konsistensi. Kartu 4-Algorithm Scoreboard hanya tampil ketika Developer Mode ON.
 
-#### 4. Tab `Activity` (Histori, Analisis & Scoreboard Riset)
-- Riwayat seluruh sesi latihan dan rekaman eksperimen yang tersimpan di memori lokal.
-- Ringkasan pencapaian akurasi terhadap ground truth 100 langkah fisik (Margin of Error %).
-- Grafik visual *Signature Rhythm Score* dan konsistensi cadence antar sesi.
+#### 4. Tab `Activity` (Jurnal Latihan & Akumulasi Harian)
+- Menampilkan progres harian akumulatif, grafik tren mingguan dari data lokal nyata, serta daftar riwayat sesi (*stacked cards* dengan filter `All`, `Walking`, `Jogging`).
+- Mengetuk kartu membuka ringkasan sesi bersih (`PostRunSummaryScreen` mode konsumen) tanpa istilah *Margin of Error 100 Langkah* atau `Participant ID`.
+- **Optimasi Penyimpanan & Kecepatan:** Saat **Developer Mode OFF**, sesi hanya menyimpan **ringkasan ringan** (`summary` + cadence buckets) agar penyimpanan ponsel hemat dan pembacaan daftar `Activity` berlangsung instan.
 
-#### 5. Tab `Settings` (Pengaturan, Labs & Telemetri)
-- **Sensor Labs & Diagnostik IMU:** Uji komparasi 4 algoritma paralel (`A1`, `A2`, `B1`, `B2`).
-- **PostHog Cloud Telemetry:** Konfigurasi Project API Key dan status event synchronization.
-- **Dataset Actions:** Ekspor dataset CSV lengkap (`sensor_data.csv` & `evaluation_summary.csv`).
-- **Manajemen Penyimpanan:** Fitur *Hapus Semua Sampel* untuk membersihkan file JSON lokal dan mereset dari awal.
-- Akses ke antarmuka riset Legacy Material 3.
+#### 5. Tab `Settings` & Hidden Developer Mode
+- **Menu End-User:**
+  - **Profile & Language:** Ubah nama panggilan, tinggi badan, dan bahasa (`English` / `Bahasa Indonesia`).
+  - **Workout Defaults:** Pilihan target harian / Open Goal, mode aktivitas default, serta posisi bawa HP (*In Hand* / *In Pocket*).
+  - **Appearance & Device:** Toggle Light/Dark Theme, Lockscreen Workout Controls, dan panduan singkat optimasi baterai Android.
+  - **Privacy & Storage:** Toggle PostHog Anonymous Telemetry (default ON) dan tombol *Clear Workout History* dengan dialog konfirmasi aman.
+- **Hidden Developer Mode (Masuk 7-Tap, Keluar 1-Switch):**
+  - Ketuk teks **App Version** sebanyak **7 kali** di bagian bawah `Settings` untuk membuka kartu **`Developer & Research Tools`**.
+  - Saat Developer Mode **ON**: perekaman raw accelerometer 100 Hz diaktifkan kembali ke file terpisah agar siap ekspor CSV, tombol `Labs` (`SensorLabsSheet`) muncul di `ActiveRunScreen`, Scoreboard 4-Algoritma tampil di `PostRunSummaryScreen`, dan akses ke 5 layar Legacy Material 3 (`LegacyExperimentShell`) tersedia.
+  - **Keluar:** Cukup geser switch **`Developer Mode`** di bagian paling atas kartu Developer & Research Tools ke posisi **OFF** untuk langsung kembali ke tampilan konsumen bersih.
 
 ---
 
 ## 5. Roadmap Eksekusi (6 Milestone) `[STATUS: PARTIALLY DONE (M1-M3 SELESAI)]`
 
 1. **Milestone 1 (SELESAI - Commit `9153502`):** Revamp UI `ActiveRunScreen` (`lib/screens/stradio/active_run_screen.dart`).
-   - Hero Waveform Card dengan tombol Play melayang di tengah saat standby, Segmented Utility Pills (BPM, Placement, Algorithm), angka langkah Sora 68px, target 100 langkah fisik, dan secondary metrics card.
+   - Hero Waveform Card dengan tombol Play melayang di tengah saat standby, Segmented Utility Pills (BPM, Placement, Algorithm), angka langkah Sora 68px, target langkah, dan secondary metrics card.
 2. **Milestone 2 (SELESAI - Commit `7da690f`):** Revamp UI `PostRunSummaryScreen` (`lib/screens/stradio/post_run_summary_screen.dart`).
-   - Header pencapaian ritmis `SESSION HIGHLIGHTS`, Stradio Signature Circular Rhythm Visualizer, matriks statistik latihan (Total Langkah out of 100, Durasi, SPM, Speed, Jarak) dalam 3 kolom horizontal deck rapi, grafik konsistensi ritme langkah, mini Scoreboard akurasi 4 algoritma (A1–B2), serta tombol aksi "Save & Finish Workout" non-blocking.
+   - Header pencapaian ritmis, Stradio Signature Circular Rhythm Visualizer, matriks statistik latihan (Steps, Durasi, SPM, Speed, Jarak), grafik konsistensi ritme langkah, mini Scoreboard akurasi 4 algoritma (A1–B2), serta tombol aksi "Save & Finish Workout" non-blocking.
 3. **Milestone 3 (SELESAI - Commit `7da690f`):** Revamp UI `SensorLabsSheet` (`lib/screens/stradio/sensor_labs_sheet.dart`).
-   - Panel diagnostik biomekanika & instrumen laboratorium eksperimen mengadopsi estetika kartu gelap modern Referensi 1 & 2: Toggle Developer Mode Live Overlay, kartu diagnostik kesehatan sensor (100 Hz latency & zero dropped samples), kalibrasi Target Ground Truth 100 Langkah, pemilih algoritma primer berpasangan 3x2, ekspor dataset CSV lengkap, dan reset data sampel.
-4. **Milestone 4 (PLANNING):** `RootNavigationShell` & `HomeScreen`.
-   - Bilah navigasi 5-tab melayang (*Floating Island Bottom Navigation*: Home, Library, **( RUN ) center elevated**, Activity, Settings) dan Dashboard Home pelari dengan sapaan asimetris modern (*"Find Your Rhythm"*) & Quick Actions.
-5. **Milestone 5 (PLANNING):** `LibraryScreen`.
-   - Katalog soundscapes reaktif (*Neon Stride 165*, *Tempo Jog 145*, *Lo-Fi Pace 118*, *Cyber Cadence 180*) mengadopsi layout kartu dari Referensi 1 dengan preview beat dan filter chips tempo.
-6. **Milestone 6 (PLANNING):** `ActivityScreen` & `SettingsScreen`.
-   - Riwayat latihan lengkap, analisis target 100 langkah fisik & akurasi error antar-kondisi (E1–E8), serta panel terpadu Settings dan data retention.
+   - Panel diagnostik biomekanika & instrumen laboratorium eksperimen: Toggle Developer Mode Live Overlay, diagnostik kesehatan sensor 100 Hz, kalibrasi Target Ground Truth, pemilih algoritma, ekspor dataset CSV lengkap, dan reset data sampel.
+4. **Milestone 4 (PLANNING):** `Onboarding`, `i18n (EN/ID)`, `RootNavigationShell` & `HomeScreen`.
+   - Implementasi First-Run Onboarding (privasi lokal, bahasa EN/ID, nama opsional fallback `"Runner"`, tinggi badan, target harian, toggle PostHog default ON), pemisahan penyimpanan summary vs raw samples, Floating Island 5-tab navigation (`stradio-reference-3-navigation.png` dengan label `"Run"`/`"Lari"`), serta `HomeScreen` dengan akumulasi langkah harian dan Quick Start.
+5. **Milestone 5 (PLANNING):** `LibraryScreen` & Integrasi Preset Tempo.
+   - Katalog tema bergaya aplikasi musik (*Chill Walk 110*, *Lo-Fi Pace 118*, *Tempo Jog 145*, *Neon Stride 165*, *Sprint Surge 180*) dengan filter chips, favorit, active soundscape bar, dan preview ritmis jujur yang siap disambungkan ke file audio tim.
+6. **Milestone 6 (PLANNING):** `ActivityScreen`, `SettingsScreen`, `Hidden Developer Mode` & Pembersihan Mode Konsumen.
+   - Jurnal riwayat `Activity` berbasis summary cepat, `SettingsScreen` dwibahasa, pemisahan tampilan konsumen vs Developer Mode (masuk via tap versi 7x, keluar via 1-switch OFF), serta penyederhanaan `ActiveRunScreen` (mesin utama `A1`, opsi *Remaining Daily Target* vs *Open Goal*) dan `PostRunSummaryScreen` saat Developer Mode OFF.
 
 ---
 
@@ -301,7 +318,15 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
      - `VERSION_CODE` diambil dari `${{ github.run_number }}` yang selalu naik secara linear di setiap build GitHub Actions.
   2. **Persistent Release Keystore via GitHub Secrets:**
      - Gradle membaca `release.keystore` persisten yang didecode dari secret `RELEASE_KEYSTORE_BASE64`.
-     - Tanda tangan digital APK selalu konsisten di setiap rilis, memungkinkan instalasi update langsung tanpa uninstall.
-     - Fallback otomatis ke `debug` signing saat build lokal tanpa secret, menjaga stabilitas environment developer.
+      - Tanda tangan digital APK selalu konsisten di setiap rilis, memungkinkan instalasi update langsung tanpa uninstall.
+      - Fallback otomatis ke `debug` signing saat build lokal tanpa secret, menjaga stabilitas environment developer.
+
+---
+
+## 8. Future Enhancement & Technical Backlog `[STATUS: PLANNING]`
+
+1. **Migrasi Lokalisasi ke Standar Resmi Flutter `.arb` + `flutter_localizations` (`gen-l10n`):**
+   - Saat ini (`v0.2.0`) aplikasi memakai kontrak abstrak per bahasa (`lib/l10n/stradio_strings.dart`, `stradio_strings_en.dart`, `stradio_strings_id.dart`) agar *compile-time safe* dan menjaga ukuran APK tetap ramping tanpa dependency tambahan.
+   - Jika ke depannya jumlah bahasa bertambah banyak atau melibatkan penerjemah eksternal, kamus teks akan dimigrasikan ke file `.arb` bersama `flutter_localizations` dan `intl`.
 
 
