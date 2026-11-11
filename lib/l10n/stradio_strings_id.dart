@@ -119,6 +119,22 @@ class StradioStringsId extends StradioStrings {
 
   // --- Library & Audio Placeholder ---
   @override
+  String get libraryHeaderSubtitle =>
+      'Selaraskan kadensi langkahmu dengan tema tempo yang responsif.';
+  @override
+  String get libraryFilterAll => 'Semua';
+  @override
+  String get libraryFilterFavorites => 'Favorit';
+  @override
+  String get libraryEmptyFavoritesTitle => 'Belum ada tema favorit';
+  @override
+  String get libraryEmptyFavoritesBody =>
+      'Ketuk ikon hati pada tema tempo mana saja untuk menyimpannya di sini.';
+  @override
+  String get libraryRunWithThemeAction => 'Lari dengan Tempo Ini';
+  @override
+  String get libraryPreviewingBadge => 'Pratinjau Tempo';
+  @override
   String get audioComingSoonNotice =>
       'Integrasi file audio segera hadir. Tempo ini sudah aktif untuk sesi larimu.';
   @override

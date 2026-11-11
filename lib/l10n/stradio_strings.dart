@@ -94,6 +94,13 @@ abstract class StradioStrings {
   String get preRunOpenGoalSubtitle;
 
   // --- Library & Audio Placeholder ---
+  String get libraryHeaderSubtitle;
+  String get libraryFilterAll;
+  String get libraryFilterFavorites;
+  String get libraryEmptyFavoritesTitle;
+  String get libraryEmptyFavoritesBody;
+  String get libraryRunWithThemeAction;
+  String get libraryPreviewingBadge;
   String get audioComingSoonNotice;
   String get emptyActivityBody;
 

@@ -46,6 +46,7 @@ class ActiveRunScreen extends StatefulWidget {
     this.isConsumerMode = false,
     this.developerModeEnabled = true,
     this.userHeightCm,
+    this.soundscapeTitle = 'Neon Stride',
   });
 
   final RecordingStore? store;
@@ -58,6 +59,7 @@ class ActiveRunScreen extends StatefulWidget {
   final bool isConsumerMode;
   final bool developerModeEnabled;
   final double? userHeightCm;
+  final String soundscapeTitle;
 
   @override
   State<ActiveRunScreen> createState() => _ActiveRunScreenState();
@@ -71,6 +73,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
   late final PostHogTelemetryService _postHogService;
   late final ForegroundNotificationService _foregroundService;
   late StradioLabSettings _labSettings;
+  late String _soundscapeTitle;
 
   _RunStreamState _streamState = _RunStreamState.connecting;
   String _recordingId = 'REC_LIVE_001';
@@ -116,6 +119,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
     _foregroundService =
         widget.foregroundService ?? FlutterForegroundNotificationService();
     _labSettings = widget.initialLabSettings;
+    _soundscapeTitle = widget.soundscapeTitle;
 
     _waveformTicker = createTicker(_onWaveformTick);
     _foregroundService.addActionListener(_handleNotificationAction);
@@ -905,6 +909,16 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
   void _updateTargetBpm(int bpm) {
     setState(() {
       _labSettings = _labSettings.copyWith(targetBpm: bpm);
+      if (widget.isConsumerMode) {
+        _soundscapeTitle = switch (bpm) {
+          110 => 'Chill Walk',
+          118 => 'Lo-Fi Pace',
+          145 => 'Tempo Jog',
+          165 => 'Neon Stride',
+          180 => 'Sprint Surge',
+          _ => _soundscapeTitle,
+        };
+      }
     });
     unawaited(StradioPreferencesService.saveLabSettings(_labSettings));
     if (_foregroundService.isServiceActive) {
@@ -1062,6 +1076,7 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
                             _EditorialRunHeader(
                               targetBpm: _labSettings.targetBpm,
                               algorithmCode: _primaryVariant.code,
+                              soundscapeTitle: _soundscapeTitle,
                               showAlgorithmBadge:
                                   !widget.isConsumerMode ||
                                   widget.developerModeEnabled,
@@ -1321,12 +1336,14 @@ class _EditorialRunHeader extends StatelessWidget {
   const _EditorialRunHeader({
     required this.targetBpm,
     required this.algorithmCode,
+    this.soundscapeTitle = 'Neon Stride',
     this.showAlgorithmBadge = true,
     required this.onSelectBpm,
   });
 
   final int targetBpm;
   final String algorithmCode;
+  final String soundscapeTitle;
   final bool showAlgorithmBadge;
   final ValueChanged<int> onSelectBpm;
 
@@ -1365,7 +1382,7 @@ class _EditorialRunHeader extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      'Neon Stride · Adaptive Stride',
+                      '$soundscapeTitle · Adaptive Stride',
                       key: const Key('soundscape_title_text'),
                       overflow: TextOverflow.ellipsis,
                       style: StradioTypography.interLabel(
@@ -1413,9 +1430,11 @@ class _EditorialRunHeader extends StatelessWidget {
           color: palette.surface,
           elevation: 4,
           itemBuilder: (context) => const [
+            PopupMenuItem(value: 110, child: Text('110 BPM (Chill Walk)')),
             PopupMenuItem(value: 118, child: Text('118 BPM (Brisk Walk)')),
             PopupMenuItem(value: 145, child: Text('145 BPM (Tempo Jog)')),
             PopupMenuItem(value: 165, child: Text('165 BPM (Neon Stride)')),
+            PopupMenuItem(value: 180, child: Text('180 BPM (Sprint Surge)')),
           ],
           child: Container(
             key: const Key('utility_bpm_selector_button'),

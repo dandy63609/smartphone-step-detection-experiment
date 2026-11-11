@@ -12,6 +12,7 @@ import '../../services/recording_service.dart';
 import '../../theme/stradio_theme.dart';
 import 'active_run_screen.dart';
 import 'home_screen.dart';
+import 'library_screen.dart';
 import 'post_run_summary_screen.dart';
 
 /// Soundscape tempo theme metadata used across Home, Library, and Active Run.
@@ -22,6 +23,7 @@ class StradioSoundscapeTheme {
     required this.subtitleEn,
     required this.subtitleId,
     required this.bpm,
+    required this.cadenceRangeLabel,
     required this.category,
     required this.activity,
     required this.icon,
@@ -32,6 +34,7 @@ class StradioSoundscapeTheme {
   final String subtitleEn;
   final String subtitleId;
   final int bpm;
+  final String cadenceRangeLabel;
   final String category; // 'chill' | 'jog' | 'fast'
   final Activity activity;
   final IconData icon;
@@ -46,6 +49,7 @@ class StradioSoundscapeTheme {
       subtitleEn: 'Easy morning stroll & steady breathing',
       subtitleId: 'Jalan santai pagi & napas teratur',
       bpm: 110,
+      cadenceRangeLabel: '105-115 SPM',
       category: 'chill',
       activity: Activity.walking,
       icon: Icons.wb_twilight_rounded,
@@ -56,6 +60,7 @@ class StradioSoundscapeTheme {
       subtitleEn: 'Brisk city walk & warm-up groove',
       subtitleId: 'Jalan cepat & ritme pemanasan hangat',
       bpm: 118,
+      cadenceRangeLabel: '112-124 SPM',
       category: 'chill',
       activity: Activity.walking,
       icon: Icons.headphones_rounded,
@@ -66,6 +71,7 @@ class StradioSoundscapeTheme {
       subtitleEn: 'Balanced endurance cadence for steady jogging',
       subtitleId: 'Kadensi seimbang untuk jogging konsisten',
       bpm: 145,
+      cadenceRangeLabel: '140-152 SPM',
       category: 'jog',
       activity: Activity.jogging,
       icon: Icons.graphic_eq_rounded,
@@ -76,6 +82,7 @@ class StradioSoundscapeTheme {
       subtitleEn: 'High-energy synth pulse for responsive running',
       subtitleId: 'Ketukan berenergi tinggi untuk lari responsif',
       bpm: 165,
+      cadenceRangeLabel: '158-172 SPM',
       category: 'jog',
       activity: Activity.jogging,
       icon: Icons.bolt_rounded,
@@ -86,6 +93,7 @@ class StradioSoundscapeTheme {
       subtitleEn: 'Peak-cadence drive for fast intervals',
       subtitleId: 'Dorongan kadensi puncak untuk interval cepat',
       bpm: 180,
+      cadenceRangeLabel: '174-186 SPM',
       category: 'fast',
       activity: Activity.jogging,
       icon: Icons.speed_rounded,
@@ -97,6 +105,13 @@ class StradioSoundscapeTheme {
       if (item.id == id) return item;
     }
     return catalog[3]; // Default: Neon Stride 165 BPM
+  }
+
+  static StradioSoundscapeTheme byBpm(int bpm) {
+    for (final item in catalog) {
+      if (item.bpm == bpm) return item;
+    }
+    return catalog[3];
   }
 }
 
@@ -223,10 +238,6 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
   late int _selectedTabIndex;
   List<SavedRecording> _recordings = const [];
   bool _isLoadingRecordings = true;
-
-  // Library state
-  String _selectedLibraryCategory = 'all';
-  String? _previewingSoundscapeId;
 
   // Settings Developer Mode unlock counter
   int _versionTapCount = 0;
@@ -545,6 +556,10 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
     );
     await StradioPreferencesService.saveLabSettings(runSettings);
 
+    final resolvedSoundscape = StradioSoundscapeTheme.byId(
+      soundscapeId ?? _profile.activeSoundscapeId,
+    );
+
     if (!mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -559,6 +574,7 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
           isConsumerMode: true,
           developerModeEnabled: _profile.developerModeEnabled,
           userHeightCm: _profile.validHeightCm,
+          soundscapeTitle: resolvedSoundscape.title,
         ),
       ),
     );
@@ -651,7 +667,7 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
                         onToggleThemeMode: widget.onToggleThemeMode,
                         onOpenRecording: _openRecordingSummary,
                       ),
-                _buildLibraryTab(palette, strings),
+                _buildLibraryTab(dailySummary),
                 _buildActivityTab(palette, strings, dailySummary),
                 _buildSettingsTab(palette, strings),
               ],
@@ -888,314 +904,42 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
     );
   }
 
-  Widget _buildLibraryTab(StradioPalette palette, StradioStrings strings) {
-    final bottomClearance = 104.0 + MediaQuery.paddingOf(context).bottom;
-    final filteredThemes = StradioSoundscapeTheme.catalog.where((theme) {
-      if (_selectedLibraryCategory == 'all') return true;
-      if (_selectedLibraryCategory == 'favorites') {
-        return _profile.favoriteSoundscapeIds.contains(theme.id);
-      }
-      return theme.category == _selectedLibraryCategory;
-    }).toList();
-
-    return SingleChildScrollView(
-      key: const Key('shell_library_scroll'),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomClearance),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                strings.navLibrary,
-                style: StradioTypography.soraHeading(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: palette.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Filter chips row
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildLibraryFilterChip(
-                      key: const Key('library_filter_all'),
-                      palette: palette,
-                      category: 'all',
-                      label: _profile.language == AppLanguage.id
-                          ? 'Semua'
-                          : 'All',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildLibraryFilterChip(
-                      key: const Key('library_filter_chill'),
-                      palette: palette,
-                      category: 'chill',
-                      label: 'Chill',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildLibraryFilterChip(
-                      key: const Key('library_filter_jog'),
-                      palette: palette,
-                      category: 'jog',
-                      label: 'Jog',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildLibraryFilterChip(
-                      key: const Key('library_filter_fast'),
-                      palette: palette,
-                      category: 'fast',
-                      label: 'Fast',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildLibraryFilterChip(
-                      key: const Key('library_filter_favorites'),
-                      palette: palette,
-                      category: 'favorites',
-                      label: _profile.language == AppLanguage.id
-                          ? 'Favorit'
-                          : 'Favorites',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Honest audio preview banner when previewing
-              if (_previewingSoundscapeId != null) ...[
-                Container(
-                  key: const Key('library_audio_preview_banner'),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: palette.accentViolet.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(StradioRadii.card),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.graphic_eq_rounded,
-                        size: 20,
-                        color: palette.accentViolet,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          strings.audioComingSoonNotice,
-                          style: StradioTypography.interBody(
-                            fontSize: 13,
-                            color: palette.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              ...filteredThemes.map(
-                (theme) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildSoundscapeTrackCard(palette, theme),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLibraryFilterChip({
-    required Key key,
-    required StradioPalette palette,
-    required String category,
-    required String label,
-  }) {
-    final isSelected = _selectedLibraryCategory == category;
-    return Material(
-      color: isSelected ? palette.accentCoral : palette.surface,
-      borderRadius: BorderRadius.circular(StradioRadii.pill),
-      child: InkWell(
-        key: key,
-        borderRadius: BorderRadius.circular(StradioRadii.pill),
-        onTap: () {
-          setState(() {
-            _selectedLibraryCategory = category;
-          });
-        },
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48, minWidth: 64),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Center(
-              child: Text(
-                label,
-                style: StradioTypography.interLabel(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : palette.textPrimary,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSoundscapeTrackCard(
-    StradioPalette palette,
-    StradioSoundscapeTheme theme,
-  ) {
-    final isActive = _profile.activeSoundscapeId == theme.id;
-    final isFavorite = _profile.favoriteSoundscapeIds.contains(theme.id);
-    final isPreviewing = _previewingSoundscapeId == theme.id;
-
-    return Material(
-      color: palette.surface,
-      borderRadius: BorderRadius.circular(StradioRadii.card),
-      child: InkWell(
-        key: Key('library_select_${theme.id}'),
-        borderRadius: BorderRadius.circular(StradioRadii.card),
-        onTap: () {
-          _updateProfile(_profile.copyWith(activeSoundscapeId: theme.id));
-        },
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(StradioRadii.card),
-            boxShadow: palette.cardShadow,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? palette.accentCoral.withValues(alpha: 0.16)
-                      : palette.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(StradioRadii.control),
-                ),
-                child: Icon(
-                  theme.icon,
-                  size: 24,
-                  color: isActive ? palette.accentCoral : palette.accentViolet,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            theme.title,
-                            style: StradioTypography.soraHeading(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: palette.surfaceSubtle,
-                            borderRadius: BorderRadius.circular(
-                              StradioRadii.tag,
-                            ),
-                          ),
-                          child: Text(
-                            '${theme.bpm} BPM',
-                            style: StradioTypography.interLabel(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: palette.accentViolet,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      theme.subtitle(_profile.language),
-                      style: StradioTypography.interBody(
-                        fontSize: 12,
-                        color: palette.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: IconButton(
-                  key: Key('library_fav_${theme.id}'),
-                  onPressed: () {
-                    final nextFavs = Set<String>.from(
-                      _profile.favoriteSoundscapeIds,
-                    );
-                    if (isFavorite) {
-                      nextFavs.remove(theme.id);
-                    } else {
-                      nextFavs.add(theme.id);
-                    }
-                    _updateProfile(
-                      _profile.copyWith(favoriteSoundscapeIds: nextFavs),
-                    );
-                  },
-                  icon: Icon(
-                    isFavorite
-                        ? Icons.favorite_rounded
-                        : Icons.favorite_border_rounded,
-                    size: 20,
-                    color: isFavorite
-                        ? palette.accentCoral
-                        : palette.textSecondary,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: IconButton(
-                  key: Key('library_preview_${theme.id}'),
-                  onPressed: () {
-                    setState(() {
-                      _previewingSoundscapeId = isPreviewing ? null : theme.id;
-                    });
-                    _updateProfile(
-                      _profile.copyWith(activeSoundscapeId: theme.id),
-                    );
-                  },
-                  icon: Icon(
-                    isPreviewing
-                        ? Icons.stop_circle_rounded
-                        : Icons.play_circle_fill_rounded,
-                    size: 24,
-                    color: isActive
-                        ? palette.accentCoral
-                        : palette.accentViolet,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  Widget _buildLibraryTab(DailyProgressSummary dailySummary) {
+    return LibraryScreen(
+      profile: _profile,
+      onSelectTheme: (theme) {
+        _updateProfile(_profile.copyWith(activeSoundscapeId: theme.id));
+      },
+      onToggleFavorite: (themeId) {
+        final nextFavs = Set<String>.from(_profile.favoriteSoundscapeIds);
+        if (nextFavs.contains(themeId)) {
+          nextFavs.remove(themeId);
+        } else {
+          nextFavs.add(themeId);
+        }
+        _updateProfile(_profile.copyWith(favoriteSoundscapeIds: nextFavs));
+      },
+      onStartRunWithTheme: (theme) {
+        final remaining = dailySummary.remainingSteps(_profile.dailyStepGoal);
+        final resolvedTarget = _profile.isOpenGoal
+            ? _profile.dailyStepGoal
+            : (remaining > 0 ? remaining : _profile.dailyStepGoal);
+        _launchActiveRun(
+          targetSteps: resolvedTarget,
+          targetBpm: theme.bpm,
+          activity: theme.activity,
+          soundscapeId: theme.id,
+        );
+      },
+      onOpenGoalSelectorForTheme: (theme) async {
+        await _updateProfile(_profile.copyWith(activeSoundscapeId: theme.id));
+        if (!mounted) return;
+        final remaining = dailySummary.remainingSteps(_profile.dailyStepGoal);
+        await _showPreRunGoalSelectorSheet(
+          remainingSteps: remaining,
+          activeTheme: theme,
+        );
+      },
     );
   }
 

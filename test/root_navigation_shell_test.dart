@@ -272,6 +272,9 @@ void main() {
       expect(find.text('Tempo Jog'), findsOneWidget);
 
       // Tap preview on Tempo Jog -> shows honest audio coming soon notice
+      await tester.ensureVisible(
+        find.byKey(const Key('library_preview_tempo_jog')),
+      );
       await tester.tap(find.byKey(const Key('library_preview_tempo_jog')));
       await tester.pumpAndSettle();
       expect(
@@ -280,11 +283,20 @@ void main() {
       );
 
       // Favorite Tempo Jog and filter by Favorites
+      await tester.ensureVisible(
+        find.byKey(const Key('library_fav_tempo_jog')),
+      );
       await tester.tap(find.byKey(const Key('library_fav_tempo_jog')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('library_filter_favorites')),
+      );
       await tester.tap(find.byKey(const Key('library_filter_favorites')));
       await tester.pumpAndSettle();
-      expect(find.text('Tempo Jog'), findsOneWidget);
+      expect(
+        find.byKey(const Key('library_select_tempo_jog')),
+        findsOneWidget,
+      );
       expect(find.text('Chill Walk'), findsNothing);
 
       // Switch to Settings tab and tap App Version 7 times to unlock Developer Mode

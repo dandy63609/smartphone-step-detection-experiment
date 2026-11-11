@@ -230,14 +230,14 @@ Aplikasi dibungkus oleh **Root Shell Navigation** menggunakan bilah navigasi mel
    - Panel diagnostik biomekanika & instrumen laboratorium eksperimen: Toggle Developer Mode Live Overlay, diagnostik kesehatan sensor 100 Hz, kalibrasi Target Ground Truth, pemilih algoritma, ekspor dataset CSV lengkap, dan reset data sampel.
 4. **Milestone 4 (SELESAI - Tahap 4A, 4B, 4C & 4D):** `Onboarding`, `i18n (EN/ID)`, `RootNavigationShell` & `HomeScreen`.
    - Implementasi First-Run Onboarding 2 langkah (`lib/screens/stradio/onboarding_screen.dart`: privasi lokal, bahasa EN/ID, nama opsional fallback `"Runner"`, tinggi badan, target harian, toggle PostHog default ON), kamus lokalisasi modular per bahasa (`lib/l10n/`), pemisahan penyimpanan summary vs raw samples, Floating Island 5-tab navigation (`lib/screens/stradio/root_navigation_shell.dart` sesuai `stradio-reference-3-navigation.png` dengan label `"Run"`/`"Lari"` & Pre-Run Goal Selector Sheet), `HomeScreen` (`lib/screens/stradio/home_screen.dart`) dengan cincin progres akumulasi langkah harian dan Quick Start, serta penyembunyian elemen riset (`Labs`, badge `A1 Midpoint`, dan `4-Algorithm Scoreboard` di `PostRunSummaryScreen`) saat Developer Mode OFF.
-5. **Milestone 5 (PLANNING):** `LibraryScreen` & Integrasi Preset Tempo.
-   - Ekstraksi dan pengayaan katalog tema bergaya aplikasi musik (*Chill Walk 110*, *Lo-Fi Pace 118*, *Tempo Jog 145*, *Neon Stride 165*, *Sprint Surge 180*) dengan filter chips, favorit, active soundscape bar, dan preview ritmis jujur yang siap disambungkan ke file audio tim.
+5. **Milestone 5 (SELESAI - Tahap 5A & 5B):** `LibraryScreen` & Integrasi Preset Tempo.
+   - Ekstraksi dan pengayaan katalog tema bergaya aplikasi musik (`lib/screens/stradio/library_screen.dart`: *Chill Walk 110*, *Lo-Fi Pace 118*, *Tempo Jog 145*, *Neon Stride 165*, *Sprint Surge 180*) dengan Active Soundscape Hero Card (`28px` Pebble, tombol 1-tap `Run This Tempo` + tombol pemilih target sesi `Pre-Run Goal Selector Sheet`), filter chips (`All`, `Chill`, `Jog`, `Fast`, `Favorites`), honest empty favorites state, inline contextual audio preview notice langsung di bawah kartu yang di-preview, serta sinkronisasi judul soundscape dan 5 opsi BPM ke `ActiveRunScreen`.
 6. **Milestone 6 (PLANNING):** `ActivityScreen`, `SettingsScreen`, `Hidden Developer Mode` & Pembersihan Mode Konsumen.
    - Pengayaan jurnal riwayat `Activity` dengan grafik tren mingguan dan filter, `SettingsScreen` dwibahasa lengkap (edit profil nama/tinggi badan/target harian, panduan baterai Android, clear workout history), serta penyempurnaan panel `Developer & Research Tools` (akses langsung ke CSV export dan `LegacyExperimentShell`).
 
 ---
 
-## 6. Protokol Integritas Eksperimen & Performa Sistem `[STATUS: DONE - 46/46 TESTS PASSED]`
+## 6. Protokol Integritas Eksperimen & Performa Sistem `[STATUS: DONE - 49/49 TESTS PASSED]`
 
 Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh **integritas riset dan metodologi ilmiah tetap terjaga 100%**:
 

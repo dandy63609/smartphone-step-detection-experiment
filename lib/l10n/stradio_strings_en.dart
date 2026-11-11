@@ -118,6 +118,22 @@ class StradioStringsEn extends StradioStrings {
 
   // --- Library & Audio Placeholder ---
   @override
+  String get libraryHeaderSubtitle =>
+      'Match your stride cadence with a responsive tempo theme.';
+  @override
+  String get libraryFilterAll => 'All';
+  @override
+  String get libraryFilterFavorites => 'Favorites';
+  @override
+  String get libraryEmptyFavoritesTitle => 'No favorite themes yet';
+  @override
+  String get libraryEmptyFavoritesBody =>
+      'Tap the heart icon on any tempo theme to save it here for quick access.';
+  @override
+  String get libraryRunWithThemeAction => 'Run This Tempo';
+  @override
+  String get libraryPreviewingBadge => 'Previewing Tempo';
+  @override
   String get audioComingSoonNotice =>
       'Audio track integration is coming soon. This tempo is active for your next run.';
   @override
