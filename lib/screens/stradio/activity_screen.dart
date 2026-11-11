@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
@@ -7,39 +8,52 @@ import '../../l10n/stradio_strings.dart';
 import '../../models/experiment_models.dart';
 import '../../theme/stradio_theme.dart';
 
-/// Daily bucket for the 7-Day Step Trend Bar Chart in [ActivityScreen].
-class DailyStepBucket {
-  const DailyStepBucket({
-    required this.date,
+/// Timeframe options for the interactive analytics chart in [ActivityScreen].
+enum ActivityTimeRange { week, month, quarter, all }
+
+/// Visualization types supported by the analytics chart in [ActivityScreen].
+enum ActivityChartType { bar, line, split }
+
+/// Aggregated period bucket for the interactive chart in [ActivityScreen].
+class ActivityChartBucket {
+  const ActivityChartBucket({
+    required this.startDate,
+    required this.endDate,
     required this.shortLabel,
-    required this.steps,
+    required this.periodLabel,
+    required this.walkingSteps,
+    required this.joggingSteps,
     required this.distanceKm,
     required this.sessionCount,
-    required this.isToday,
+    required this.daySpanCount,
+    required this.isCurrentBucket,
   });
 
-  final DateTime date;
+  final DateTime startDate;
+  final DateTime endDate;
   final String shortLabel;
-  final int steps;
+  final String periodLabel;
+  final int walkingSteps;
+  final int joggingSteps;
   final double distanceKm;
   final int sessionCount;
-  final bool isToday;
+  final int daySpanCount;
+  final bool isCurrentBucket;
+
+  int get totalSteps => walkingSteps + joggingSteps;
 }
 
-/// Consumer Workout Journal & Weekly Step Trend screen (`v0.2.0` Milestone 6A).
+/// Consumer Workout Journal & Interactive Step Analytics screen (`v0.2.0` Stage 7B).
 ///
-/// Follows `assets/images/stradio-reference-1.png`, `docs/DESIGN.md`, and
-/// `docs/EXPERIENCE.md`:
-/// - **7-Day Step Trend & Weekly Summary Card (`28px` Pebble):** Displays real
-///   accumulated steps, distance (`km`), and workout count over the last 7
-///   calendar days alongside a 7-bar daily chart (`Mon`..`Sun` / `Sen`..`Min`).
-///   Zero fake or pre-populated numbers.
-/// - **Activity Filter Chips (`999px` Pill):** `All` / `Semua`, `Walking` /
-///   `Jalan`, and `Jogging` / `Lari` with `48x48 dp` minimum touch targets.
-/// - **Enriched Session History Cards (`16px` Card):** Date/time stamp,
-///   activity badge (`WALK` / `JOG`), steps, calibrated distance (`km`),
-///   duration, target BPM, and an optional `RAW 100Hz` badge when Developer
-///   Mode is enabled and raw samples are present.
+/// Features:
+/// - **Interactive Multi-Range & Multi-Type Analytics Card (`28px` Pebble):**
+///   Supports `1W`, `1M`, `3M`, and `All` timeframes across `Bar`, smooth
+///   `Line/Area`, and stacked `Activity Split` (`Walking` vs `Jogging`) views.
+/// - **Click-to-Inspect Frosted Popover:** Tapping any bar or line node shows
+///   a frosted glass detail card with exact period dates, steps, distance,
+///   sessions, and goal completion.
+/// - **Symmetrical Activity Filter Chips (`999px` Pill):** Balanced `All`,
+///   `Walking`, and `Jogging` chips with `48x48 dp` touch targets.
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({
     super.key,
@@ -64,6 +78,9 @@ class ActivityScreen extends StatefulWidget {
 
 class _ActivityScreenState extends State<ActivityScreen> {
   String _selectedFilter = 'all'; // 'all' | 'walking' | 'jogging'
+  ActivityTimeRange _selectedRange = ActivityTimeRange.week;
+  ActivityChartType _selectedChartType = ActivityChartType.bar;
+  int? _selectedBucketIndex;
 
   String _formatNumber(int value) {
     final raw = value.toString();
@@ -99,6 +116,45 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return '$y-$m-$d · $hh:$mm';
   }
 
+  String _formatShortDate(DateTime dt) {
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    return '$d/$m';
+  }
+
+  String _monthShortLabel(int month, AppLanguage language) {
+    if (language == AppLanguage.id) {
+      return const [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'Mei',
+        'Jun',
+        'Jul',
+        'Agu',
+        'Sep',
+        'Okt',
+        'Nov',
+        'Des',
+      ][(month - 1).clamp(0, 11)];
+    }
+    return const [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ][(month - 1).clamp(0, 11)];
+  }
+
   String _weekdayShortLabel(int weekday, AppLanguage language) {
     if (language == AppLanguage.id) {
       return switch (weekday) {
@@ -122,50 +178,162 @@ class _ActivityScreenState extends State<ActivityScreen> {
     };
   }
 
-  List<DailyStepBucket> _computeWeeklyBuckets(
+  List<ActivityChartBucket> _computePeriodBuckets(
     List<SavedRecording> sourceRecordings,
   ) {
     final now = (widget.referenceDate ?? DateTime.now()).toLocal();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final buckets = <DailyStepBucket>[];
+    final lang = widget.profile.language;
 
-    for (var offset = 6; offset >= 0; offset--) {
-      final dayDate = todayStart.subtract(Duration(days: offset));
-      var daySteps = 0;
-      var dayDistKm = 0.0;
-      var daySessions = 0;
-
-      for (final rec in sourceRecordings) {
-        final localRec = rec.createdAt.toLocal();
-        if (localRec.year == dayDate.year &&
-            localRec.month == dayDate.month &&
-            localRec.day == dayDate.day) {
-          final steps = rec.effectiveStepCount;
-          daySteps += steps;
-          dayDistKm += RunMetricsCalculator.estimateDistanceKm(
-            steps: steps,
-            activity: rec.config.activity,
-            heightCm: widget.profile.validHeightCm,
-          );
-          daySessions++;
-        }
-      }
-
-      buckets.add(
-        DailyStepBucket(
-          date: dayDate,
-          shortLabel: _weekdayShortLabel(
-            dayDate.weekday,
-            widget.profile.language,
-          ),
-          steps: daySteps,
-          distanceKm: dayDistKm,
-          sessionCount: daySessions,
-          isToday: offset == 0,
+    if (_selectedRange == ActivityTimeRange.week) {
+      return _buildFixedDayBuckets(
+        sourceRecordings: sourceRecordings,
+        todayStart: todayStart,
+        bucketCount: 7,
+        daysPerBucket: 1,
+        labelBuilder: (start, end, isCurrent) => (
+          _weekdayShortLabel(start.weekday, lang),
+          '${_weekdayShortLabel(start.weekday, lang)}, ${_formatShortDate(start)}',
         ),
       );
     }
 
+    if (_selectedRange == ActivityTimeRange.month) {
+      return _buildFixedDayBuckets(
+        sourceRecordings: sourceRecordings,
+        todayStart: todayStart,
+        bucketCount: 5,
+        daysPerBucket: 6,
+        labelBuilder: (start, end, isCurrent) => (
+          _formatShortDate(end),
+          '${_formatShortDate(start)} - ${_formatShortDate(end)}',
+        ),
+      );
+    }
+
+    if (_selectedRange == ActivityTimeRange.quarter) {
+      return _buildFixedDayBuckets(
+        sourceRecordings: sourceRecordings,
+        todayStart: todayStart,
+        bucketCount: 6,
+        daysPerBucket: 15,
+        labelBuilder: (start, end, isCurrent) => (
+          _formatShortDate(end),
+          '${_formatShortDate(start)} - ${_formatShortDate(end)}',
+        ),
+      );
+    }
+
+    // ActivityTimeRange.all -> 6 monthly buckets ending at current month
+    final buckets = <ActivityChartBucket>[];
+    for (var mOffset = 5; mOffset >= 0; mOffset--) {
+      final monthStart = DateTime(todayStart.year, todayStart.month - mOffset);
+      final nextMonthStart = DateTime(monthStart.year, monthStart.month + 1);
+      final monthEnd = nextMonthStart.subtract(const Duration(days: 1));
+      var walkSteps = 0;
+      var jogSteps = 0;
+      var distKm = 0.0;
+      var sessions = 0;
+
+      for (final rec in sourceRecordings) {
+        final localRec = rec.createdAt.toLocal();
+        final recDay = DateTime(localRec.year, localRec.month, localRec.day);
+        if (!recDay.isBefore(monthStart) && recDay.isBefore(nextMonthStart)) {
+          final steps = rec.effectiveStepCount;
+          if (rec.config.activity == Activity.jogging) {
+            jogSteps += steps;
+          } else {
+            walkSteps += steps;
+          }
+          distKm += RunMetricsCalculator.estimateDistanceKm(
+            steps: steps,
+            activity: rec.config.activity,
+            heightCm: widget.profile.validHeightCm,
+          );
+          sessions++;
+        }
+      }
+
+      final monthLabel = _monthShortLabel(monthStart.month, lang);
+      buckets.add(
+        ActivityChartBucket(
+          startDate: monthStart,
+          endDate: monthEnd,
+          shortLabel: monthLabel,
+          periodLabel: '$monthLabel ${monthStart.year}',
+          walkingSteps: walkSteps,
+          joggingSteps: jogSteps,
+          distanceKm: distKm,
+          sessionCount: sessions,
+          daySpanCount: monthEnd.day,
+          isCurrentBucket: mOffset == 0,
+        ),
+      );
+    }
+    return buckets;
+  }
+
+  List<ActivityChartBucket> _buildFixedDayBuckets({
+    required List<SavedRecording> sourceRecordings,
+    required DateTime todayStart,
+    required int bucketCount,
+    required int daysPerBucket,
+    required (String, String) Function(
+      DateTime start,
+      DateTime end,
+      bool isCurrent,
+    )
+    labelBuilder,
+  }) {
+    final buckets = <ActivityChartBucket>[];
+    final totalDays = bucketCount * daysPerBucket;
+    final windowStart = todayStart.subtract(Duration(days: totalDays - 1));
+
+    for (var i = 0; i < bucketCount; i++) {
+      final start = windowStart.add(Duration(days: i * daysPerBucket));
+      final end = start.add(Duration(days: daysPerBucket - 1));
+      final exclusiveEnd = end.add(const Duration(days: 1));
+      var walkSteps = 0;
+      var jogSteps = 0;
+      var distKm = 0.0;
+      var sessions = 0;
+
+      for (final rec in sourceRecordings) {
+        final localRec = rec.createdAt.toLocal();
+        final recDay = DateTime(localRec.year, localRec.month, localRec.day);
+        if (!recDay.isBefore(start) && recDay.isBefore(exclusiveEnd)) {
+          final steps = rec.effectiveStepCount;
+          if (rec.config.activity == Activity.jogging) {
+            jogSteps += steps;
+          } else {
+            walkSteps += steps;
+          }
+          distKm += RunMetricsCalculator.estimateDistanceKm(
+            steps: steps,
+            activity: rec.config.activity,
+            heightCm: widget.profile.validHeightCm,
+          );
+          sessions++;
+        }
+      }
+
+      final isCurrent = i == bucketCount - 1;
+      final (shortLabel, periodLabel) = labelBuilder(start, end, isCurrent);
+      buckets.add(
+        ActivityChartBucket(
+          startDate: start,
+          endDate: end,
+          shortLabel: shortLabel,
+          periodLabel: periodLabel,
+          walkingSteps: walkSteps,
+          joggingSteps: jogSteps,
+          distanceKm: distKm,
+          sessionCount: sessions,
+          daySpanCount: daysPerBucket,
+          isCurrentBucket: isCurrent,
+        ),
+      );
+    }
     return buckets;
   }
 
@@ -173,7 +341,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget build(BuildContext context) {
     final palette = StradioPalette.of(context);
     final strings = StradioStrings.of(widget.profile.language);
-    final bottomClearance = 104.0 + MediaQuery.paddingOf(context).bottom;
+    final bottomClearance = 112.0 + MediaQuery.paddingOf(context).bottom;
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
 
     final filteredRecordings =
         widget.recordings.where((rec) {
@@ -186,7 +355,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
           return true;
         }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    final weeklyBuckets = _computeWeeklyBuckets(filteredRecordings);
+    final periodBuckets = _computePeriodBuckets(filteredRecordings);
+    final activeSelectedIndex =
+        _selectedBucketIndex != null &&
+            _selectedBucketIndex! >= 0 &&
+            _selectedBucketIndex! < periodBuckets.length
+        ? _selectedBucketIndex
+        : null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -218,15 +393,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 1. 7-Day Step Trend & Weekly Summary Card (28px Pebble)
-                  _buildWeeklySummaryCard(
+                  // 1. Interactive Analytics & Trend Summary Card (28px Pebble)
+                  _buildAnalyticsSummaryCard(
                     palette: palette,
                     strings: strings,
-                    buckets: weeklyBuckets,
+                    buckets: periodBuckets,
+                    selectedBucketIndex: activeSelectedIndex,
+                    disableAnimations: disableAnimations,
                   ),
                   const SizedBox(height: 18),
 
-                  // 2. Activity Filter Chips Row (999px Pill, 48x48 dp touch targets)
+                  // 2. Symmetrical Activity Filter Chips Row (999px Pill, 48x48 dp)
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -288,28 +465,30 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  Widget _buildWeeklySummaryCard({
+  Widget _buildAnalyticsSummaryCard({
     required StradioPalette palette,
     required StradioStrings strings,
-    required List<DailyStepBucket> buckets,
+    required List<ActivityChartBucket> buckets,
+    required int? selectedBucketIndex,
+    required bool disableAnimations,
   }) {
-    final totalWeekSteps = buckets.fold<int>(0, (s, b) => s + b.steps);
-    final totalWeekDistKm = buckets.fold<double>(
-      0.0,
-      (s, b) => s + b.distanceKm,
-    );
-    final totalWeekSessions = buckets.fold<int>(
-      0,
-      (s, b) => s + b.sessionCount,
-    );
+    final totalSteps = buckets.fold<int>(0, (s, b) => s + b.totalSteps);
+    final totalDistKm = buckets.fold<double>(0.0, (s, b) => s + b.distanceKm);
+    final totalSessions = buckets.fold<int>(0, (s, b) => s + b.sessionCount);
 
     final dailyGoal = widget.profile.dailyStepGoal > 0
         ? widget.profile.dailyStepGoal
         : StradioUserProfile.defaultDailyStepGoal;
+    final avgSpan = buckets.isNotEmpty ? buckets.first.daySpanCount : 1;
+    final periodTarget = dailyGoal * avgSpan;
     final maxBucketSteps = buckets.fold<int>(
-      dailyGoal,
-      (m, b) => math.max(m, b.steps),
+      math.max(100, periodTarget),
+      (m, b) => math.max(m, b.totalSteps),
     );
+
+    final selectedBucket = selectedBucketIndex != null
+        ? buckets[selectedBucketIndex]
+        : null;
 
     return Container(
       key: const Key('activity_weekly_summary_card'),
@@ -322,17 +501,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header Title + Session Pill
           Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             spacing: 8,
-            runSpacing: 6,
+            runSpacing: 8,
             children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.bar_chart_rounded,
+                    Icons.insights_rounded,
                     size: 18,
                     color: palette.accentCoral,
                   ),
@@ -357,7 +537,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   borderRadius: BorderRadius.circular(StradioRadii.pill),
                 ),
                 child: Text(
-                  strings.activitySessionsCount(totalWeekSessions),
+                  strings.activitySessionsCount(totalSessions),
                   style: StradioTypography.interLabel(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -369,7 +549,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Weekly Totals Row
+          // Totals Row
           Row(
             children: [
               Expanded(
@@ -377,7 +557,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _formatNumber(totalWeekSteps),
+                      _formatNumber(totalSteps),
                       key: const Key('activity_weekly_total_steps'),
                       style: StradioTypography.soraHeading(
                         fontSize: 24,
@@ -402,7 +582,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${totalWeekDistKm.toStringAsFixed(2)} km',
+                      '${totalDistKm.toStringAsFixed(2)} km',
                       key: const Key('activity_weekly_total_distance'),
                       style: StradioTypography.soraHeading(
                         fontSize: 18,
@@ -424,82 +604,662 @@ class _ActivityScreenState extends State<ActivityScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
 
-          // 7-Day Step Trend Bar Chart
+          // Range Selector + Chart Type Switcher Controls
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: palette.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(StradioRadii.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildRangePill(
+                        key: const Key('activity_range_week'),
+                        palette: palette,
+                        range: ActivityTimeRange.week,
+                        label: strings.activityRangeWeek,
+                      ),
+                      _buildRangePill(
+                        key: const Key('activity_range_month'),
+                        palette: palette,
+                        range: ActivityTimeRange.month,
+                        label: strings.activityRangeMonth,
+                      ),
+                      _buildRangePill(
+                        key: const Key('activity_range_quarter'),
+                        palette: palette,
+                        range: ActivityTimeRange.quarter,
+                        label: strings.activityRangeQuarter,
+                      ),
+                      _buildRangePill(
+                        key: const Key('activity_range_all'),
+                        palette: palette,
+                        range: ActivityTimeRange.all,
+                        label: strings.activityRangeAll,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: palette.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(StradioRadii.pill),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildChartTypeButton(
+                      key: const Key('activity_chart_type_bar'),
+                      palette: palette,
+                      type: ActivityChartType.bar,
+                      icon: Icons.bar_chart_rounded,
+                      tooltip: strings.activityChartBarLabel,
+                    ),
+                    _buildChartTypeButton(
+                      key: const Key('activity_chart_type_line'),
+                      palette: palette,
+                      type: ActivityChartType.line,
+                      icon: Icons.show_chart_rounded,
+                      tooltip: strings.activityChartLineLabel,
+                    ),
+                    _buildChartTypeButton(
+                      key: const Key('activity_chart_type_split'),
+                      palette: palette,
+                      type: ActivityChartType.split,
+                      icon: Icons.stacked_bar_chart_rounded,
+                      tooltip: strings.activityChartSplitLabel,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Active Interactive Chart Area
           SizedBox(
             key: const Key('activity_weekly_bar_chart'),
-            height: 96,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            height: 112,
+            child: switch (_selectedChartType) {
+              ActivityChartType.bar => _buildBarChartView(
+                palette: palette,
+                buckets: buckets,
+                maxSteps: maxBucketSteps,
+                dailyGoal: dailyGoal,
+                selectedIndex: selectedBucketIndex,
+                disableAnimations: disableAnimations,
+              ),
+              ActivityChartType.line => _buildLineChartView(
+                palette: palette,
+                buckets: buckets,
+                maxSteps: maxBucketSteps,
+                selectedIndex: selectedBucketIndex,
+              ),
+              ActivityChartType.split => _buildSplitChartView(
+                palette: palette,
+                buckets: buckets,
+                maxSteps: maxBucketSteps,
+                selectedIndex: selectedBucketIndex,
+                disableAnimations: disableAnimations,
+              ),
+            },
+          ),
+
+          if (_selectedChartType == ActivityChartType.split) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (var i = 0; i < buckets.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildDayTrendBar(
+                _buildLegendDot(
+                  color: palette.accentViolet,
+                  label: strings.activityFilterWalking,
+                  palette: palette,
+                ),
+                const SizedBox(width: 14),
+                _buildLegendDot(
+                  color: palette.accentCoral,
+                  label: strings.activityFilterJogging,
+                  palette: palette,
+                ),
+              ],
+            ),
+          ],
+
+          // Click-to-Inspect Frosted Glass Info Popover (targeted accent 2 of 2)
+          AnimatedSwitcher(
+            duration: disableAnimations
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            child: selectedBucket == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    key: ValueKey('popover_${selectedBucket.periodLabel}'),
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _buildBucketFrostedPopover(
                       palette: palette,
-                      bucket: buckets[i],
-                      maxSteps: maxBucketSteps,
+                      strings: strings,
+                      bucket: selectedBucket,
                       dailyGoal: dailyGoal,
                     ),
                   ),
-                ],
-              ],
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDayTrendBar({
+  Widget _buildRangePill({
+    required Key key,
     required StradioPalette palette,
-    required DailyStepBucket bucket,
+    required ActivityTimeRange range,
+    required String label,
+  }) {
+    final isSelected = _selectedRange == range;
+    return Material(
+      color: isSelected ? palette.accentCoral : Colors.transparent,
+      borderRadius: BorderRadius.circular(StradioRadii.pill),
+      child: InkWell(
+        key: key,
+        borderRadius: BorderRadius.circular(StradioRadii.pill),
+        onTap: () {
+          setState(() {
+            _selectedRange = range;
+            _selectedBucketIndex = null;
+          });
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 36, minWidth: 42),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Center(
+              child: Text(
+                label,
+                style: StradioTypography.interLabel(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : palette.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChartTypeButton({
+    required Key key,
+    required StradioPalette palette,
+    required ActivityChartType type,
+    required IconData icon,
+    required String tooltip,
+  }) {
+    final isSelected = _selectedChartType == type;
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: tooltip,
+      child: Material(
+        color: isSelected ? palette.surface : Colors.transparent,
+        borderRadius: BorderRadius.circular(StradioRadii.pill),
+        child: InkWell(
+          key: key,
+          borderRadius: BorderRadius.circular(StradioRadii.pill),
+          onTap: () {
+            setState(() {
+              _selectedChartType = type;
+            });
+          },
+          child: SizedBox(
+            width: 38,
+            height: 36,
+            child: Icon(
+              icon,
+              size: 18,
+              color: isSelected ? palette.accentCoral : palette.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBarChartView({
+    required StradioPalette palette,
+    required List<ActivityChartBucket> buckets,
     required int maxSteps,
     required int dailyGoal,
+    required int? selectedIndex,
+    required bool disableAnimations,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (var i = 0; i < buckets.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: _buildInteractiveBarColumn(
+              index: i,
+              palette: palette,
+              bucket: buckets[i],
+              maxSteps: maxSteps,
+              dailyGoal: dailyGoal,
+              isSelected: selectedIndex == i,
+              disableAnimations: disableAnimations,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildInteractiveBarColumn({
+    required int index,
+    required StradioPalette palette,
+    required ActivityChartBucket bucket,
+    required int maxSteps,
+    required int dailyGoal,
+    required bool isSelected,
+    required bool disableAnimations,
   }) {
     final ratio = maxSteps > 0
-        ? (bucket.steps / maxSteps).clamp(0.0, 1.0)
+        ? (bucket.totalSteps / maxSteps).clamp(0.0, 1.0)
         : 0.0;
-    final barHeight = bucket.steps == 0 ? 6.0 : (12.0 + ratio * 52.0);
+    final barHeight = bucket.totalSteps == 0 ? 8.0 : (14.0 + ratio * 64.0);
+    final periodTarget = dailyGoal * bucket.daySpanCount;
     final reachedGoal =
         !widget.profile.isOpenGoal &&
-        bucket.steps >= dailyGoal &&
-        bucket.steps > 0;
+        bucket.totalSteps >= periodTarget &&
+        bucket.totalSteps > 0;
 
     final Color barColor;
-    if (bucket.steps == 0) {
+    if (bucket.totalSteps == 0) {
       barColor = palette.surfaceSubtle;
     } else if (reachedGoal) {
       barColor = StradioColors.statusLive;
-    } else if (bucket.isToday) {
+    } else if (bucket.isCurrentBucket || isSelected) {
       barColor = palette.accentCoral;
     } else {
       barColor = palette.accentViolet.withValues(alpha: 0.72);
     }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
+    return InkWell(
+      key: Key('activity_chart_bucket_$index'),
+      borderRadius: BorderRadius.circular(StradioRadii.control),
+      onTap: () {
+        setState(() {
+          _selectedBucketIndex = isSelected ? null : index;
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            AnimatedContainer(
+              duration: disableAnimations
+                  ? Duration.zero
+                  : const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              height: barHeight,
+              decoration: BoxDecoration(
+                color: barColor,
+                borderRadius: BorderRadius.circular(StradioRadii.pill),
+                border: isSelected
+                    ? Border.all(color: palette.textPrimary, width: 2)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              bucket.shortLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: StradioTypography.interLabel(
+                fontSize: 10,
+                fontWeight: bucket.isCurrentBucket || isSelected
+                    ? FontWeight.w800
+                    : FontWeight.w600,
+                color: bucket.isCurrentBucket || isSelected
+                    ? palette.accentCoral
+                    : palette.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSplitChartView({
+    required StradioPalette palette,
+    required List<ActivityChartBucket> buckets,
+    required int maxSteps,
+    required int? selectedIndex,
+    required bool disableAnimations,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Container(
-          height: barHeight,
-          decoration: BoxDecoration(
-            color: barColor,
-            borderRadius: BorderRadius.circular(StradioRadii.pill),
+        for (var i = 0; i < buckets.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: InkWell(
+              key: Key('activity_chart_bucket_$i'),
+              borderRadius: BorderRadius.circular(StradioRadii.control),
+              onTap: () {
+                setState(() {
+                  _selectedBucketIndex = selectedIndex == i ? null : i;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Builder(
+                      builder: (context) {
+                        final bucket = buckets[i];
+                        final totalRatio = maxSteps > 0
+                            ? (bucket.totalSteps / maxSteps).clamp(0.0, 1.0)
+                            : 0.0;
+                        final totalHeight = bucket.totalSteps == 0
+                            ? 8.0
+                            : (16.0 + totalRatio * 62.0);
+
+                        return AnimatedContainer(
+                          duration: disableAnimations
+                              ? Duration.zero
+                              : const Duration(milliseconds: 260),
+                          curve: Curves.easeOutCubic,
+                          height: totalHeight,
+                          foregroundDecoration: selectedIndex == i
+                              ? BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    StradioRadii.pill,
+                                  ),
+                                  border: Border.all(
+                                    color: palette.textPrimary,
+                                    width: 2,
+                                  ),
+                                )
+                              : null,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              StradioRadii.pill,
+                            ),
+                            child: bucket.totalSteps == 0
+                                ? ColoredBox(color: palette.surfaceSubtle)
+                                : Column(
+                                    children: [
+                                      if (bucket.joggingSteps > 0)
+                                        Expanded(
+                                          flex: bucket.joggingSteps,
+                                          child: ColoredBox(
+                                            color: palette.accentCoral,
+                                            child: const SizedBox.expand(),
+                                          ),
+                                        ),
+                                      if (bucket.walkingSteps > 0)
+                                        Expanded(
+                                          flex: bucket.walkingSteps,
+                                          child: ColoredBox(
+                                            color: palette.accentViolet,
+                                            child: const SizedBox.expand(),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      buckets[i].shortLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: StradioTypography.interLabel(
+                        fontSize: 10,
+                        fontWeight:
+                            buckets[i].isCurrentBucket || selectedIndex == i
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: buckets[i].isCurrentBucket || selectedIndex == i
+                            ? palette.accentCoral
+                            : palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildLineChartView({
+    required StradioPalette palette,
+    required List<ActivityChartBucket> buckets,
+    required int maxSteps,
+    required int? selectedIndex,
+  }) {
+    return Column(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  key: const Key('activity_line_chart_canvas'),
+                  painter: _ActivityLineAreaPainter(
+                    buckets: buckets,
+                    maxSteps: maxSteps,
+                    selectedIndex: selectedIndex,
+                    lineColor: palette.accentCoral,
+                    fillTopColor: palette.accentCoral.withValues(alpha: 0.24),
+                    fillBottomColor: palette.accentCoral.withValues(alpha: 0.0),
+                    gridColor: palette.textMuted.withValues(alpha: 0.16),
+                    nodeCoreColor: palette.surface,
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    for (var i = 0; i < buckets.length; i++)
+                      Expanded(
+                        child: GestureDetector(
+                          key: Key('activity_chart_bucket_$i'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            setState(() {
+                              _selectedBucketIndex = selectedIndex == i
+                                  ? null
+                                  : i;
+                            });
+                          },
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 6),
+        Row(
+          children: [
+            for (var i = 0; i < buckets.length; i++)
+              Expanded(
+                child: Text(
+                  buckets[i].shortLabel,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: StradioTypography.interLabel(
+                    fontSize: 10,
+                    fontWeight: buckets[i].isCurrentBucket || selectedIndex == i
+                        ? FontWeight.w800
+                        : FontWeight.w600,
+                    color: buckets[i].isCurrentBucket || selectedIndex == i
+                        ? palette.accentCoral
+                        : palette.textSecondary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendDot({
+    required Color color,
+    required String label,
+    required StradioPalette palette,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
         Text(
-          bucket.shortLabel,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          label,
           style: StradioTypography.interLabel(
-            fontSize: 10,
-            fontWeight: bucket.isToday ? FontWeight.w800 : FontWeight.w600,
-            color: bucket.isToday ? palette.accentCoral : palette.textSecondary,
+            fontSize: 11,
+            color: palette.textSecondary,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBucketFrostedPopover({
+    required StradioPalette palette,
+    required StradioStrings strings,
+    required ActivityChartBucket bucket,
+    required int dailyGoal,
+  }) {
+    final periodTarget = dailyGoal * bucket.daySpanCount;
+    final goalPct = periodTarget > 0
+        ? ((bucket.totalSteps / periodTarget) * 100).round().clamp(0, 999)
+        : 0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(StradioRadii.card),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          key: const Key('activity_chart_popover'),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: palette.surfaceSubtle.withValues(
+              alpha: palette.isDark ? 0.82 : 0.88,
+            ),
+            borderRadius: BorderRadius.circular(StradioRadii.card),
+            border: Border.all(
+              color: Colors.white.withValues(
+                alpha: palette.isDark ? 0.08 : 0.55,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      bucket.periodLabel,
+                      style: StradioTypography.soraHeading(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 2,
+                      children: [
+                        Text(
+                          '${_formatNumber(bucket.totalSteps)} ${strings.metricSteps.toLowerCase()}',
+                          style: StradioTypography.interLabel(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: palette.accentCoral,
+                          ),
+                        ),
+                        Text(
+                          '${bucket.distanceKm.toStringAsFixed(2)} km',
+                          style: StradioTypography.interBody(
+                            fontSize: 12,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          strings.activitySessionsCount(bucket.sessionCount),
+                          style: StradioTypography.interBody(
+                            fontSize: 12,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        if (!widget.profile.isOpenGoal)
+                          Text(
+                            '${strings.activityTooltipGoalLabel}: $goalPct%',
+                            style: StradioTypography.interBody(
+                              fontSize: 12,
+                              color: palette.accentViolet,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: IconButton(
+                  key: const Key('activity_popover_close_button'),
+                  tooltip: strings.settingsCancelAction,
+                  onPressed: () {
+                    setState(() {
+                      _selectedBucketIndex = null;
+                    });
+                  },
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -522,28 +1282,32 @@ class _ActivityScreenState extends State<ActivityScreen> {
         onTap: () {
           setState(() {
             _selectedFilter = filter;
+            _selectedBucketIndex = null;
           });
         },
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48, minWidth: 68),
+          constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 16, color: fgColor),
-                  const SizedBox(width: 6),
-                ],
-                Text(
-                  label,
-                  style: StradioTypography.interLabel(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: fgColor,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 16, color: fgColor),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    label,
+                    style: StradioTypography.interLabel(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: fgColor,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -671,10 +1435,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: palette.textSecondary,
-              ),
+              Icon(Icons.chevron_right_rounded, color: palette.textSecondary),
             ],
           ),
         ),
@@ -768,6 +1529,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               onPressed: () {
                 setState(() {
                   _selectedFilter = 'all';
+                  _selectedBucketIndex = null;
                 });
               },
               child: Text(strings.activityFilterAll),
@@ -779,3 +1541,106 @@ class _ActivityScreenState extends State<ActivityScreen> {
   }
 }
 
+class _ActivityLineAreaPainter extends CustomPainter {
+  _ActivityLineAreaPainter({
+    required this.buckets,
+    required this.maxSteps,
+    required this.selectedIndex,
+    required this.lineColor,
+    required this.fillTopColor,
+    required this.fillBottomColor,
+    required this.gridColor,
+    required this.nodeCoreColor,
+  });
+
+  final List<ActivityChartBucket> buckets;
+  final int maxSteps;
+  final int? selectedIndex;
+  final Color lineColor;
+  final Color fillTopColor;
+  final Color fillBottomColor;
+  final Color gridColor;
+  final Color nodeCoreColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (buckets.isEmpty) return;
+
+    const topPad = 12.0;
+    const bottomPad = 10.0;
+    final usableHeight = math.max(12.0, size.height - topPad - bottomPad);
+
+    final gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 1.0;
+    canvas.drawLine(
+      Offset(0, topPad + usableHeight * 0.5),
+      Offset(size.width, topPad + usableHeight * 0.5),
+      gridPaint,
+    );
+    canvas.drawLine(
+      Offset(0, size.height - bottomPad),
+      Offset(size.width, size.height - bottomPad),
+      gridPaint,
+    );
+
+    final colWidth = size.width / buckets.length;
+    final points = <Offset>[];
+    for (var i = 0; i < buckets.length; i++) {
+      final ratio = maxSteps > 0
+          ? (buckets[i].totalSteps / maxSteps).clamp(0.0, 1.0)
+          : 0.0;
+      final x = colWidth * i + colWidth / 2;
+      final y = size.height - bottomPad - (ratio * usableHeight);
+      points.add(Offset(x, y));
+    }
+
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var i = 0; i < points.length - 1; i++) {
+      final p0 = points[i];
+      final p1 = points[i + 1];
+      final midX = (p0.dx + p1.dx) / 2;
+      linePath.cubicTo(midX, p0.dy, midX, p1.dy, p1.dx, p1.dy);
+    }
+
+    final fillPath = Path.from(linePath)
+      ..lineTo(points.last.dx, size.height - bottomPad)
+      ..lineTo(points.first.dx, size.height - bottomPad)
+      ..close();
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [fillTopColor, fillBottomColor],
+      ).createShader(Rect.fromLTWH(0, topPad, size.width, usableHeight));
+    canvas.drawPath(fillPath, fillPaint);
+
+    final strokePaint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(linePath, strokePaint);
+
+    for (var i = 0; i < points.length; i++) {
+      final isSelected = selectedIndex == i;
+      final radius = isSelected ? 6.5 : 4.5;
+      canvas.drawCircle(points[i], radius, Paint()..color = lineColor);
+      canvas.drawCircle(
+        points[i],
+        radius * 0.45,
+        Paint()..color = nodeCoreColor,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ActivityLineAreaPainter oldDelegate) {
+    return oldDelegate.buckets != buckets ||
+        oldDelegate.maxSteps != maxSteps ||
+        oldDelegate.selectedIndex != selectedIndex ||
+        oldDelegate.lineColor != lineColor;
+  }
+}

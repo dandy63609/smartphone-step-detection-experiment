@@ -175,12 +175,108 @@ void main() {
       // 5. Tap session card -> opens PostRunSummaryScreen
       await tester.drag(
         find.byKey(const Key('shell_activity_scroll')),
-        const Offset(0, -160),
+        const Offset(0, -220),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('activity_item_REC_20261111_001')));
       await tester.pumpAndSettle();
       expect(find.text('3,400 STEPS'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Stage 7B: ActivityScreen switches 1W/1M/3M/All ranges, Bar/Line/Split chart types, and opens Frosted Popover on bucket tap',
+    (tester) async {
+      final now = DateTime(2026, 11, 11, 10, 0);
+      final store = _TestRecordingStore()
+        ..saved.addAll([
+          buildRecording(
+            id: 'REC_20261111_001',
+            createdAt: now,
+            steps: 3400,
+            activity: Activity.jogging,
+          ),
+          buildRecording(
+            id: 'REC_20261022_001',
+            createdAt: now.subtract(const Duration(days: 20)),
+            steps: 2600,
+            activity: Activity.walking,
+          ),
+          buildRecording(
+            id: 'REC_20260912_001',
+            createdAt: now.subtract(const Duration(days: 60)),
+            steps: 4000,
+            activity: Activity.jogging,
+          ),
+        ]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: StradioTheme.lightTheme,
+          home: RootNavigationShell(
+            initialTabIndex: 2,
+            initialProfile: const StradioUserProfile(
+              nickname: 'Raka',
+              heightCm: 170,
+              dailyStepGoal: 5000,
+              language: AppLanguage.en,
+              hasCompletedOnboarding: true,
+            ),
+            store: store,
+            postHogService: PostHogTelemetryService(apiKey: ''),
+            referenceDate: now,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 1. Default 1W shows only today's 3,400 steps (1 session)
+      expect(find.text('3,400'), findsOneWidget);
+      expect(find.text('1 session'), findsOneWidget);
+
+      // 2. Tap today's bar (index 6) -> opens frosted popover with details
+      await tester.tap(find.byKey(const Key('activity_chart_bucket_6')));
+      await tester.pumpAndSettle();
+      final popover = find.byKey(const Key('activity_chart_popover'));
+      expect(popover, findsOneWidget);
+      expect(
+        find.descendant(of: popover, matching: find.text('3,400 steps')),
+        findsOneWidget,
+      );
+
+      // Close popover
+      await tester.tap(find.byKey(const Key('activity_popover_close_button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('activity_chart_popover')), findsNothing);
+
+      // 3. Switch to 1M (30 days) -> includes 20-day-old walk (3,400 + 2,600 = 6,000 steps)
+      await tester.tap(find.byKey(const Key('activity_range_month')));
+      await tester.pumpAndSettle();
+      expect(find.text('6,000'), findsOneWidget);
+      expect(find.text('2 sessions'), findsOneWidget);
+
+      // 4. Switch to 3M (90 days) -> includes 60-day-old run (10,000 steps, 3 sessions)
+      await tester.tap(find.byKey(const Key('activity_range_quarter')));
+      await tester.pumpAndSettle();
+      expect(find.text('10,000'), findsOneWidget);
+      expect(find.text('3 sessions'), findsOneWidget);
+
+      // 5. Switch to Line Chart & tap last node -> opens popover cleanly
+      await tester.tap(find.byKey(const Key('activity_chart_type_line')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('activity_line_chart_canvas')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('activity_chart_bucket_5')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('activity_chart_popover')), findsOneWidget);
+
+      // 6. Switch to Activity Split Chart -> renders Walking/Jogging legend
+      await tester.tap(find.byKey(const Key('activity_chart_type_split')));
+      await tester.pumpAndSettle();
+      expect(find.text('Walking'), findsWidgets);
+      expect(find.text('Jogging'), findsWidgets);
     },
   );
 
