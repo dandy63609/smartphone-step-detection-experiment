@@ -104,7 +104,36 @@ abstract class StradioStrings {
   String get audioComingSoonNotice;
   String get emptyActivityBody;
 
+  // --- Activity Journal ---
+  String get activityWeeklyTitle;
+  String get activityFilterAll;
+  String get activityFilterWalking;
+  String get activityFilterJogging;
+  String activitySessionsCount(int count);
+  String get activityEmptyFilterBody;
+  String get activityStartFirstRunAction;
+
+  // --- Settings & Profile ---
+  String get settingsProfileSectionTitle;
+  String get settingsEditProfileAction;
+  String get settingsSaveProfileAction;
+  String get settingsAppearanceTitle;
+  String get settingsAppearanceSubtitle;
+  String get settingsBatteryGuideTitle;
+  String get settingsBatteryGuideSubtitle;
+  String get settingsClearHistoryAction;
+  String get settingsClearHistoryConfirmTitle;
+  String get settingsClearHistoryConfirmBody;
+  String get settingsClearHistoryClearedToast;
+  String get settingsCancelAction;
+  String get settingsDeleteAction;
+
   // --- Developer Mode ---
+  String get settingsDevToolsTitle;
+  String get settingsDevToolsSubtitle;
+  String get settingsOpenSensorLabsAction;
+  String get settingsExportCsvAction;
+  String get settingsOpenLegacyShellAction;
   String get devModeEnabledToast;
   String get devModeDisabledToast;
   String devModeTapsRemaining(int remaining);

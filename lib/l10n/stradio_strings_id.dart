@@ -141,7 +141,66 @@ class StradioStringsId extends StradioStrings {
   String get emptyActivityBody =>
       'Belum ada sesi tersimpan. Tekan Lari di bawah untuk mulai langkah pertamamu.';
 
+  // --- Activity Journal ---
+  @override
+  String get activityWeeklyTitle => '7 Hari Terakhir';
+  @override
+  String get activityFilterAll => 'Semua';
+  @override
+  String get activityFilterWalking => 'Jalan';
+  @override
+  String get activityFilterJogging => 'Lari';
+  @override
+  String activitySessionsCount(int count) => '$count sesi';
+  @override
+  String get activityEmptyFilterBody =>
+      'Belum ada sesi untuk filter aktivitas ini.';
+  @override
+  String get activityStartFirstRunAction => 'Mulai Lari Pertama';
+
+  // --- Settings & Profile ---
+  @override
+  String get settingsProfileSectionTitle => 'Profil Pelari & Target Harian';
+  @override
+  String get settingsEditProfileAction => 'Ubah Profil & Target';
+  @override
+  String get settingsSaveProfileAction => 'Simpan Perubahan';
+  @override
+  String get settingsAppearanceTitle => 'Mode Tema';
+  @override
+  String get settingsAppearanceSubtitle =>
+      'Beralih antara Terang Gading dan Gelap Karbon';
+  @override
+  String get settingsBatteryGuideTitle => 'Panduan Saku & Layar Mati';
+  @override
+  String get settingsBatteryGuideSubtitle =>
+      'Atur penggunaan baterai ke Tanpa Pembatasan agar Android tidak menjeda deteksi langkah saat HP di dalam saku.';
+  @override
+  String get settingsClearHistoryAction => 'Hapus Riwayat Latihan';
+  @override
+  String get settingsClearHistoryConfirmTitle => 'Hapus semua riwayat latihan?';
+  @override
+  String get settingsClearHistoryConfirmBody =>
+      'Tindakan ini menghapus permanen seluruh sesi tersimpan dan mereset progres hari ini di perangkat ini.';
+  @override
+  String get settingsClearHistoryClearedToast => 'Riwayat latihan dihapus.';
+  @override
+  String get settingsCancelAction => 'Batal';
+  @override
+  String get settingsDeleteAction => 'Hapus Semua';
+
   // --- Developer Mode ---
+  @override
+  String get settingsDevToolsTitle => 'Alat Pengembang & Riset';
+  @override
+  String get settingsDevToolsSubtitle =>
+      'Perekaman sampel mentah 100 Hz, scoreboard 4 algoritma, dan ekspor dataset CSV aktif.';
+  @override
+  String get settingsOpenSensorLabsAction => 'Buka Sensor Labs & Diagnostik';
+  @override
+  String get settingsExportCsvAction => 'Ekspor Dataset Riset (CSV)';
+  @override
+  String get settingsOpenLegacyShellAction => 'Buka Shell Eksperimen E1-E8';
   @override
   String get devModeEnabledToast => 'Mode Pengembang diaktifkan.';
   @override

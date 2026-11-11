@@ -309,8 +309,12 @@ void main() {
       );
 
       final versionTarget = find.byKey(const Key('settings_version_tap_target'));
+      await tester.drag(
+        find.byKey(const Key('shell_settings_scroll')),
+        const Offset(0, -320),
+      );
+      await tester.pumpAndSettle();
       for (var i = 0; i < 7; i++) {
-        await tester.ensureVisible(versionTarget);
         await tester.tap(versionTarget);
         await tester.pump();
       }
@@ -327,7 +331,11 @@ void main() {
 
       // Exit Developer Mode in 1 tap via the top switch
       final devSwitch = find.byKey(const Key('settings_dev_mode_switch'));
-      await tester.ensureVisible(devSwitch);
+      await tester.drag(
+        find.byKey(const Key('shell_settings_scroll')),
+        const Offset(0, -180),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(devSwitch);
       await tester.pumpAndSettle();
 

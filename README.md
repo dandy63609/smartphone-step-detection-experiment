@@ -19,6 +19,12 @@ Under the hood, Stradio processes real-time 100 Hz smartphone accelerometer stre
   - Asymmetric two-tone greeting header with Light/Dark theme toggle (`Warm Ivory` Light Mode and `Deep Obsidian` Night Run Mode).
   - **Daily Goal Hero Card** with an animated circular progress ring (`450 ms`), celebratory goal-reached banner, and accumulated daily `Steps`, `Distance (km)`, and `Active Time` across all sessions recorded on the same calendar day.
   - **Active Soundscape Strip & Quick Start Presets:** 1-tap launch into *Lo-Fi Pace (118 BPM)*, *Tempo Jog (145 BPM)*, or *Neon Stride (165 BPM)*.
+- **Music-Style Soundscape Library (`LibraryScreen`):**
+  - **Active Soundscape Hero Card** with ideal SPM cadence range, animated rhythm bars, 1-tap `Run This Tempo` button, and a contextual goal-mode selector button.
+  - Horizontal category filter chips (`All`, `Chill`, `Jog`, `Fast`, `Favorites`), inline honest audio preview notice, and persistent favorite themes.
+- **Activity Journal & Bilingual Settings (`ActivityScreen` & `SettingsScreen`):**
+  - **7-Day Step Trend Bar Chart** and weekly totals that dynamically filter by `All`, `Walking`, or `Jogging` sessions, sorted chronologically with newest runs first.
+  - Full profile and daily goal editor sheet, Android pocket/battery optimization guide, and explicit confirmation dialog for clearing local workout history.
 - **Storage-Optimized Consumer Sessions:**
   - When **Developer Mode is OFF**, completed workouts save lightweight ~1 KB summary JSON files (preserving step counts, duration, target BPM, and cadence consistency buckets while stripping raw 100 Hz sensor arrays) so history loading is instant.
 - **Resilient Lifecycle & Lockscreen Controls:**
@@ -76,7 +82,8 @@ lib/
 ├── models/           # StradioUserProfile, ExperimentConfig, SensorSample, SavedRecording
 ├── screens/
 │   ├── stradio/      # Consumer & Hybrid UI: Onboarding, RootNavigationShell, HomeScreen,
-│   │                 # ActiveRunScreen, PostRunSummaryScreen, SensorLabsSheet
+│   │                 # LibraryScreen, ActivityScreen, SettingsScreen, ActiveRunScreen,
+│   │                 # PostRunSummaryScreen, SensorLabsSheet
 │   └── ...           # Legacy E1-E8 Research Matrix screens (Dashboard, Setup, Live, Results, Export)
 ├── services/         # Accelerometer stream, RecordingStore, Preferences, PostHog, Foreground task
 ├── theme/            # StradioTheme tokens (Warm Ivory Light & Deep Obsidian Dark, 100% borderless)
@@ -160,7 +167,7 @@ lib/
 
 ## Running Tests
 
-Run static analysis and the full automated test suite (46 unit and widget tests covering signal processing, height-calibrated stride metrics, summary-only vs. raw storage, bilingual localization, 2-step onboarding, 5-slot floating navigation shell, `HomeScreen` daily accumulation, and full 4-screen research workflows):
+Run static analysis and the full automated test suite (52 unit and widget tests covering signal processing, height-calibrated stride metrics, summary-only vs. raw storage, bilingual localization, 2-step onboarding, 5-slot floating navigation shell, `HomeScreen` daily accumulation, `LibraryScreen` tempo catalog, `ActivityScreen` 7-day trends, `SettingsScreen` profile & developer suite, and full 4-screen research workflows):
 
 ```bash
 flutter analyze

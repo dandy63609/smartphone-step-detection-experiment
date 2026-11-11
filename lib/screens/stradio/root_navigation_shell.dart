@@ -11,9 +11,12 @@ import '../../services/recording_repository.dart';
 import '../../services/recording_service.dart';
 import '../../theme/stradio_theme.dart';
 import 'active_run_screen.dart';
+import 'activity_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
 import 'post_run_summary_screen.dart';
+import 'sensor_labs_sheet.dart';
+import 'settings_screen.dart';
 
 /// Soundscape tempo theme metadata used across Home, Library, and Active Run.
 class StradioSoundscapeTheme {
@@ -226,8 +229,6 @@ class RootNavigationShell extends StatefulWidget {
 }
 
 class _RootNavigationShellState extends State<RootNavigationShell> {
-  static const int _requiredVersionTaps = 7;
-
   late final RecordingStore _store;
   late final RecordingService _recordingService;
   late final ExportService _exportService;
@@ -238,9 +239,6 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
   late int _selectedTabIndex;
   List<SavedRecording> _recordings = const [];
   bool _isLoadingRecordings = true;
-
-  // Settings Developer Mode unlock counter
-  int _versionTapCount = 0;
 
   @override
   void initState() {
@@ -288,18 +286,6 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
       buffer.write(raw[i]);
     }
     return buffer.toString();
-  }
-
-  String _formatDuration(double totalSeconds) {
-    final sec = totalSeconds.round().clamp(0, 86400 * 7);
-    final mins = sec ~/ 60;
-    final remSec = sec % 60;
-    if (mins >= 60) {
-      final hrs = mins ~/ 60;
-      final remMins = mins % 60;
-      return '${hrs}h ${remMins}m';
-    }
-    return '${mins}m ${remSec.toString().padLeft(2, '0')}s';
   }
 
   Future<void> _handleCenterRunButtonTap() async {
@@ -668,8 +654,8 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
                         onOpenRecording: _openRecordingSummary,
                       ),
                 _buildLibraryTab(dailySummary),
-                _buildActivityTab(palette, strings, dailySummary),
-                _buildSettingsTab(palette, strings),
+                _buildActivityTab(),
+                _buildSettingsTab(),
               ],
             ),
           ),
@@ -943,422 +929,98 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
     );
   }
 
-  Widget _buildActivityTab(
-    StradioPalette palette,
-    StradioStrings strings,
-    DailyProgressSummary dailySummary,
-  ) {
-    final bottomClearance = 104.0 + MediaQuery.paddingOf(context).bottom;
-
-    return SingleChildScrollView(
-      key: const Key('shell_activity_scroll'),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomClearance),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                strings.navActivity,
-                style: StradioTypography.soraHeading(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: palette.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 14),
-              if (_isLoadingRecordings)
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_recordings.isEmpty)
-                Container(
-                  key: const Key('activity_empty_state_card'),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: palette.surface,
-                    borderRadius: BorderRadius.circular(StradioRadii.squircle),
-                    boxShadow: palette.cardShadow,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.directions_run_rounded,
-                        size: 40,
-                        color: palette.accentCoral,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        strings.emptyActivityBody,
-                        textAlign: TextAlign.center,
-                        style: StradioTypography.interBody(
-                          fontSize: 14,
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                ..._recordings.map((rec) {
-                  final steps = rec.effectiveStepCount;
-                  final distKm = RunMetricsCalculator.estimateDistanceKm(
-                    steps: steps,
-                    activity: rec.config.activity,
-                    heightCm: _profile.validHeightCm,
-                  );
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Material(
-                      color: palette.surface,
-                      borderRadius: BorderRadius.circular(StradioRadii.card),
-                      child: InkWell(
-                        key: Key('activity_item_${rec.recordingId}'),
-                        borderRadius: BorderRadius.circular(StradioRadii.card),
-                        onTap: () => _openRecordingSummary(rec),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(
-                              StradioRadii.card,
-                            ),
-                            boxShadow: palette.cardShadow,
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: palette.accentCoral.withValues(
-                                    alpha: 0.14,
-                                  ),
-                                  borderRadius: BorderRadius.circular(
-                                    StradioRadii.control,
-                                  ),
-                                ),
-                                child: Icon(
-                                  rec.config.activity == Activity.jogging
-                                      ? Icons.directions_run_rounded
-                                      : Icons.directions_walk_rounded,
-                                  color: palette.accentCoral,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${_formatNumber(steps)} ${strings.metricSteps.toLowerCase()}',
-                                      style: StradioTypography.soraHeading(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: palette.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${distKm.toStringAsFixed(2)} km · ${_formatDuration(rec.durationSeconds)}',
-                                      style: StradioTypography.interBody(
-                                        fontSize: 12,
-                                        color: palette.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                color: palette.textSecondary,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-            ],
-          ),
-        ),
-      ),
+  Widget _buildActivityTab() {
+    return ActivityScreen(
+      profile: _profile,
+      recordings: _recordings,
+      isLoading: _isLoadingRecordings,
+      onOpenRecording: _openRecordingSummary,
+      onStartRunTap: _handleCenterRunButtonTap,
+      referenceDate: widget.referenceDate,
     );
   }
 
-  Widget _buildSettingsTab(StradioPalette palette, StradioStrings strings) {
-    final bottomClearance = 104.0 + MediaQuery.paddingOf(context).bottom;
-
-    return SingleChildScrollView(
-      key: const Key('shell_settings_scroll'),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, bottomClearance),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                strings.navSettings,
-                style: StradioTypography.soraHeading(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: palette.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Language Switch Card (Live instant sync across Shell & Tabs)
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: BorderRadius.circular(StradioRadii.squircle),
-                  boxShadow: palette.cardShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      strings.onboardingLanguageLabel,
-                      style: StradioTypography.soraHeading(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildSettingsLanguagePill(
-                            key: const Key('settings_lang_en'),
-                            palette: palette,
-                            language: AppLanguage.en,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildSettingsLanguagePill(
-                            key: const Key('settings_lang_id'),
-                            palette: palette,
-                            language: AppLanguage.id,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Anonymous Telemetry (PostHog) Opt-Out Card
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: palette.surface,
-                  borderRadius: BorderRadius.circular(StradioRadii.squircle),
-                  boxShadow: palette.cardShadow,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            strings.telemetryToggleTitle,
-                            style: StradioTypography.soraHeading(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: palette.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            strings.telemetryToggleSubtitle,
-                            style: StradioTypography.interBody(
-                              fontSize: 12,
-                              color: palette.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      height: 48,
-                      child: Switch(
-                        key: const Key('settings_telemetry_switch'),
-                        value: _profile.analyticsEnabled,
-                        onChanged: (enabled) {
-                          _updateProfile(
-                            _profile.copyWith(analyticsEnabled: enabled),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Hidden Developer & Research Tools Card (Only visible when Developer Mode is ON)
-              if (_profile.developerModeEnabled) ...[
-                Container(
-                  key: const Key('settings_developer_tools_card'),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: palette.surface,
-                    borderRadius: BorderRadius.circular(StradioRadii.squircle),
-                    boxShadow: palette.cardShadow,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.science_rounded,
-                            size: 20,
-                            color: palette.accentViolet,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Developer & Research Tools',
-                              style: StradioTypography.soraHeading(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: palette.textPrimary,
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 48,
-                            child: Switch(
-                              key: const Key('settings_dev_mode_switch'),
-                              value: _profile.developerModeEnabled,
-                              onChanged: (enabled) {
-                                _versionTapCount = 0;
-                                _updateProfile(
-                                  _profile.copyWith(
-                                    developerModeEnabled: enabled,
-                                  ),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      enabled
-                                          ? strings.devModeEnabledToast
-                                          : strings.devModeDisabledToast,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-
-              // App Version 7-Tap Unlock Target
-              Center(
-                child: InkWell(
-                  key: const Key('settings_version_tap_target'),
-                  borderRadius: BorderRadius.circular(StradioRadii.pill),
-                  onTap: () {
-                    if (_profile.developerModeEnabled) return;
-                    _versionTapCount++;
-                    final remaining = _requiredVersionTaps - _versionTapCount;
-                    if (remaining <= 0) {
-                      _versionTapCount = 0;
-                      _updateProfile(
-                        _profile.copyWith(developerModeEnabled: true),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(strings.devModeEnabledToast)),
-                      );
-                    } else if (remaining <= 3) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          duration: const Duration(milliseconds: 900),
-                          content: Text(strings.devModeTapsRemaining(remaining)),
-                        ),
-                      );
-                    }
-                  },
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: 48,
-                      minWidth: 120,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Stradio v0.2.0',
-                          style: StradioTypography.interLabel(
-                            fontSize: 12,
-                            color: palette.textMuted,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsLanguagePill({
-    required Key key,
-    required StradioPalette palette,
-    required AppLanguage language,
-  }) {
-    final isSelected = _profile.language == language;
-    return Material(
-      color: isSelected ? palette.accentCoral : palette.surfaceSubtle,
-      borderRadius: BorderRadius.circular(StradioRadii.pill),
-      child: InkWell(
-        key: key,
-        borderRadius: BorderRadius.circular(StradioRadii.pill),
-        onTap: () {
-          if (_profile.language == language) return;
-          _updateProfile(_profile.copyWith(language: language));
-        },
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Center(
-              child: Text(
-                language.nativeLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: StradioTypography.interLabel(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : palette.textPrimary,
-                ),
-              ),
+  Widget _buildSettingsTab() {
+    return SettingsScreen(
+      profile: _profile,
+      onUpdateProfile: _updateProfile,
+      onToggleThemeMode: widget.onToggleThemeMode,
+      onClearHistory: () async {
+        await _store.clearAll();
+        await _reloadRecordings();
+      },
+      onOpenSensorLabs: _openSensorLabsFromSettings,
+      onExportCsvDataset: _exportCsvFromSettings,
+      onOpenLegacyExperiment: () async {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => LegacyExperimentShell(
+              store: _store,
+              recordingService: _recordingService,
             ),
           ),
+        );
+        await _reloadRecordings();
+      },
+    );
+  }
+
+  Future<void> _openSensorLabsFromSettings() async {
+    final savedLab = StradioPreferencesService.loadLabSettings();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => SensorLabsSheet(
+        initialSettings: savedLab,
+        sensorHealth: const SensorHealthReport(
+          sampleCount: 0,
+          requestedRateHz: 100.0,
+          effectiveRateHz: 0.0,
+          sampleDrops: 0,
+          latestTimestampNs: 0,
         ),
+        sensorStreamActive: _recordingService.isRecording,
+        store: _store,
+        recordingService: _recordingService,
+        exportService: _exportService,
+        postHogService: _postHogService,
+        onSettingsChanged: (updated) {
+          StradioPreferencesService.saveLabSettings(updated);
+        },
       ),
     );
+    await _reloadRecordings();
+  }
+
+  Future<String> _exportCsvFromSettings() async {
+    final recordings = await _store.list();
+    if (recordings.isEmpty) {
+      return _profile.language == AppLanguage.id
+          ? 'Belum ada rekaman tersimpan untuk diekspor ke CSV.'
+          : 'No saved recordings yet. Complete and save a run first to export CSV files.';
+    }
+    try {
+      final files = await _exportService.writeCsvFiles(recordings);
+      final totalSamples = recordings.fold<int>(
+        0,
+        (sum, r) => sum + r.samples.length,
+      );
+      await _postHogService.captureCsvExported(
+        distinctId: _profile.effectiveNickname,
+        totalRecordingsExported: recordings.length,
+        totalSamplesExported: totalSamples,
+      );
+      try {
+        await _exportService.share(files);
+      } on Object {
+        // Share sheet may be unavailable in headless tests; files are written.
+      }
+      return _profile.language == AppLanguage.id
+          ? 'Berhasil mengekspor ${files.length} file CSV (${recordings.length} sesi, $totalSamples sampel).'
+          : 'Exported ${files.length} CSV files (${recordings.length} trials, $totalSamples samples).';
+    } on Object catch (error) {
+      return 'CSV export failed: $error';
+    }
   }
 }

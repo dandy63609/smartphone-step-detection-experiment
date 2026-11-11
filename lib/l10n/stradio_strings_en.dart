@@ -140,7 +140,67 @@ class StradioStringsEn extends StradioStrings {
   String get emptyActivityBody =>
       'No runs recorded yet. Tap Run below to capture your first steps.';
 
+  // --- Activity Journal ---
+  @override
+  String get activityWeeklyTitle => 'Last 7 Days';
+  @override
+  String get activityFilterAll => 'All';
+  @override
+  String get activityFilterWalking => 'Walking';
+  @override
+  String get activityFilterJogging => 'Jogging';
+  @override
+  String activitySessionsCount(int count) =>
+      count == 1 ? '1 session' : '$count sessions';
+  @override
+  String get activityEmptyFilterBody =>
+      'No sessions match this activity filter.';
+  @override
+  String get activityStartFirstRunAction => 'Start First Run';
+
+  // --- Settings & Profile ---
+  @override
+  String get settingsProfileSectionTitle => 'Runner Profile & Daily Goal';
+  @override
+  String get settingsEditProfileAction => 'Edit Profile & Goal';
+  @override
+  String get settingsSaveProfileAction => 'Save Changes';
+  @override
+  String get settingsAppearanceTitle => 'Theme Mode';
+  @override
+  String get settingsAppearanceSubtitle =>
+      'Switch between Warm Ivory Light and Carbon Dark';
+  @override
+  String get settingsBatteryGuideTitle => 'Pocket & Screen-Off Guide';
+  @override
+  String get settingsBatteryGuideSubtitle =>
+      'Set battery usage to Unrestricted so Android does not pause step detection while your phone is in your pocket.';
+  @override
+  String get settingsClearHistoryAction => 'Clear Workout History';
+  @override
+  String get settingsClearHistoryConfirmTitle => 'Clear all workout history?';
+  @override
+  String get settingsClearHistoryConfirmBody =>
+      'This permanently deletes all saved runs and resets today\'s progress on this device.';
+  @override
+  String get settingsClearHistoryClearedToast => 'Workout history cleared.';
+  @override
+  String get settingsCancelAction => 'Cancel';
+  @override
+  String get settingsDeleteAction => 'Delete All';
+
   // --- Developer Mode ---
+  @override
+  String get settingsDevToolsTitle => 'Developer & Research Tools';
+  @override
+  String get settingsDevToolsSubtitle =>
+      '100 Hz raw sample recording, 4-algorithm scoreboard, and CSV dataset export are active.';
+  @override
+  String get settingsOpenSensorLabsAction => 'Open Sensor Labs & Diagnostics';
+  @override
+  String get settingsExportCsvAction => 'Export Research Dataset (CSV)';
+  @override
+  String get settingsOpenLegacyShellAction => 'Open E1-E8 Research Shell';
   @override
   String get devModeEnabledToast => 'Developer Mode enabled.';
   @override
