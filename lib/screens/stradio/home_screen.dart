@@ -43,6 +43,7 @@ class HomeScreen extends StatelessWidget {
     required this.onSwitchTab,
     this.onToggleThemeMode,
     this.onOpenRecording,
+    this.referenceDate,
   });
 
   final StradioUserProfile profile;
@@ -53,6 +54,7 @@ class HomeScreen extends StatelessWidget {
   final ValueChanged<int> onSwitchTab;
   final VoidCallback? onToggleThemeMode;
   final ValueChanged<SavedRecording>? onOpenRecording;
+  final DateTime? referenceDate;
 
   static const List<String> _quickStartIds = [
     'lofi_pace',
@@ -143,38 +145,44 @@ class HomeScreen extends StatelessWidget {
     StradioPalette palette,
     StradioStrings strings,
   ) {
+    final nowLocal = (referenceDate ?? DateTime.now()).toLocal();
+    final timeGreeting = strings.homeTimeGreeting(nowLocal.hour);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 2,
             children: [
               Text(
-                strings.homeGreetingPrefix,
-                style: StradioTypography.interLabel(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: palette.textSecondary,
-                  letterSpacing: 0.3,
+                timeGreeting,
+                key: const Key('home_greeting_prefix'),
+                style: StradioTypography.soraHeading(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: palette.textPrimary,
+                  letterSpacing: -0.4,
                 ),
               ),
-              const SizedBox(height: 2),
               Text(
                 profile.effectiveNickname,
                 key: const Key('home_greeting_nickname'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: StradioTypography.soraHeading(
-                  fontSize: 26,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: palette.accentCoral,
-                  letterSpacing: -0.5,
+                  letterSpacing: -0.4,
                 ),
               ),
             ],
           ),
         ),
+        const SizedBox(width: 8),
         if (onToggleThemeMode != null)
           Semantics(
             button: true,

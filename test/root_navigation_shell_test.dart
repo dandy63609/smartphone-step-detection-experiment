@@ -101,14 +101,21 @@ void main() {
             ),
             store: store,
             onProfileChanged: (updated) => latestProfile = updated,
+            referenceDate: DateTime(2026, 11, 11, 8, 30),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Verify 5-slot Floating Island labels in English
+      // Verify 5-slot Floating Island labels in English and protruding Run button
       final navBar = find.byKey(const Key('floating_island_nav_bar'));
       expect(navBar, findsOneWidget);
+      final runButtonRect = tester.getRect(
+        find.byKey(const Key('nav_center_run_button')),
+      );
+      final homeTabRect = tester.getRect(find.byKey(const Key('nav_tab_home')));
+      expect(runButtonRect.top, lessThan(homeTabRect.top));
+
       expect(
         find.descendant(of: navBar, matching: find.text('Home')),
         findsOneWidget,
@@ -129,7 +136,7 @@ void main() {
         find.descendant(of: navBar, matching: find.text('Settings')),
         findsOneWidget,
       );
-      expect(find.text('Hello again,'), findsOneWidget);
+      expect(find.text('Good morning,'), findsOneWidget);
       expect(find.text('Raka'), findsOneWidget);
 
       // Navigate to Settings tab and switch language to Bahasa Indonesia
@@ -162,10 +169,10 @@ void main() {
         findsOneWidget,
       );
 
-      // Navigate back to Home tab and verify Bahasa Indonesia greeting
+      // Navigate back to Home tab and verify Bahasa Indonesia time-aware greeting
       await tester.tap(find.byKey(const Key('nav_tab_home')));
       await tester.pumpAndSettle();
-      expect(find.text('Halo lagi,'), findsOneWidget);
+      expect(find.text('Selamat pagi,'), findsOneWidget);
     },
   );
 

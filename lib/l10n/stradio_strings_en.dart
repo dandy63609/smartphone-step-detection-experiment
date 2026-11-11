@@ -71,6 +71,14 @@ class StradioStringsEn extends StradioStrings {
   @override
   String get homeGreetingPrefix => 'Hello again,';
   @override
+  String homeTimeGreeting(int hour) {
+    if (hour >= 5 && hour < 12) return 'Good morning,';
+    if (hour >= 12 && hour < 17) return 'Good afternoon,';
+    if (hour >= 17 && hour < 21) return 'Good evening,';
+    return 'Night stride,';
+  }
+
+  @override
   String get homeDailyGoalTitle => 'Today\'s Progress';
   @override
   String get homeOpenGoalBadge => 'Open Goal Today';
@@ -142,7 +150,23 @@ class StradioStringsEn extends StradioStrings {
 
   // --- Activity Journal ---
   @override
-  String get activityWeeklyTitle => 'Last 7 Days';
+  String get activityWeeklyTitle => 'Step Trend';
+  @override
+  String get activityRangeWeek => '1W';
+  @override
+  String get activityRangeMonth => '1M';
+  @override
+  String get activityRangeQuarter => '3M';
+  @override
+  String get activityRangeAll => 'All';
+  @override
+  String get activityChartBarLabel => 'Bar';
+  @override
+  String get activityChartLineLabel => 'Line';
+  @override
+  String get activityChartSplitLabel => 'Split';
+  @override
+  String get activityTooltipGoalLabel => 'Daily goal';
   @override
   String get activityFilterAll => 'All';
   @override
@@ -157,6 +181,17 @@ class StradioStringsEn extends StradioStrings {
       'No sessions match this activity filter.';
   @override
   String get activityStartFirstRunAction => 'Start First Run';
+
+  // --- Active Run & Soundscape Picker ---
+  @override
+  String get tempoPickerTitle => 'Choose Running Tempo';
+  @override
+  String get tempoPickerSubtitle =>
+      'Pick a target BPM soundscape to sync with your stride.';
+  @override
+  String get placementHandLabel => 'Hand';
+  @override
+  String get placementPocketLabel => 'Pocket';
 
   // --- Settings & Profile ---
   @override

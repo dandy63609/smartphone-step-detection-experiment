@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../evaluation/run_metrics_calculator.dart';
@@ -582,6 +584,33 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
       backgroundColor: palette.canvas,
       body: Stack(
         children: [
+          // Subtle ambient radial wash (MOTION 2, calm and matte per DESIGN.md)
+          Positioned(
+            top: -120,
+            left: -80,
+            right: -80,
+            height: 360,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topCenter,
+                    radius: 0.95,
+                    colors: [
+                      palette.accentCoral.withValues(
+                        alpha: palette.isDark ? 0.11 : 0.08,
+                      ),
+                      palette.accentViolet.withValues(
+                        alpha: palette.isDark ? 0.06 : 0.04,
+                      ),
+                      palette.canvas.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           SafeArea(
             bottom: false,
             child: IndexedStack(
@@ -652,6 +681,7 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
                         },
                         onToggleThemeMode: widget.onToggleThemeMode,
                         onOpenRecording: _openRecordingSummary,
+                        referenceDate: widget.referenceDate,
                       ),
                 _buildLibraryTab(dailySummary),
                 _buildActivityTab(),
@@ -681,57 +711,102 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
     StradioPalette palette,
     StradioStrings strings,
   ) {
-    return Container(
+    final glassFill = palette.surface.withValues(
+      alpha: palette.isDark ? 0.80 : 0.86,
+    );
+    final glassBorder = Colors.white.withValues(
+      alpha: palette.isDark ? 0.10 : 0.55,
+    );
+
+    return SizedBox(
       key: const Key('floating_island_nav_bar'),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: palette.surface,
-        borderRadius: BorderRadius.circular(StradioRadii.hero),
-        boxShadow: palette.cardShadow,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      height: 86,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
         children: [
-          Expanded(
-            child: _buildNavTabSlot(
-              key: const Key('nav_tab_home'),
-              palette: palette,
-              tabIndex: 0,
-              activeIcon: Icons.home_rounded,
-              inactiveIcon: Icons.home_outlined,
-              label: strings.navHome,
+          // Frosted Glass Floating Capsule (targeted accent 1 of 2)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 68,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(StradioRadii.hero),
+                boxShadow: palette.cardShadow,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(StradioRadii.hero),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: glassFill,
+                      borderRadius: BorderRadius.circular(StradioRadii.hero),
+                      border: Border.all(color: glassBorder, width: 1),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: _buildNavTabSlot(
+                            key: const Key('nav_tab_home'),
+                            palette: palette,
+                            tabIndex: 0,
+                            activeIcon: Icons.home_rounded,
+                            inactiveIcon: Icons.home_outlined,
+                            label: strings.navHome,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildNavTabSlot(
+                            key: const Key('nav_tab_library'),
+                            palette: palette,
+                            tabIndex: 1,
+                            activeIcon: Icons.graphic_eq_rounded,
+                            inactiveIcon: Icons.graphic_eq_rounded,
+                            label: strings.navLibrary,
+                          ),
+                        ),
+                        const Expanded(child: SizedBox.shrink()),
+                        Expanded(
+                          child: _buildNavTabSlot(
+                            key: const Key('nav_tab_activity'),
+                            palette: palette,
+                            tabIndex: 2,
+                            activeIcon: Icons.bar_chart_rounded,
+                            inactiveIcon: Icons.bar_chart_rounded,
+                            label: strings.navActivity,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildNavTabSlot(
+                            key: const Key('nav_tab_settings'),
+                            palette: palette,
+                            tabIndex: 3,
+                            activeIcon: Icons.settings_rounded,
+                            inactiveIcon: Icons.settings_outlined,
+                            label: strings.navSettings,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-          Expanded(
-            child: _buildNavTabSlot(
-              key: const Key('nav_tab_library'),
-              palette: palette,
-              tabIndex: 1,
-              activeIcon: Icons.graphic_eq_rounded,
-              inactiveIcon: Icons.graphic_eq_rounded,
-              label: strings.navLibrary,
-            ),
-          ),
-          Expanded(child: _buildCenterRunActionSlot(palette, strings)),
-          Expanded(
-            child: _buildNavTabSlot(
-              key: const Key('nav_tab_activity'),
-              palette: palette,
-              tabIndex: 2,
-              activeIcon: Icons.bar_chart_rounded,
-              inactiveIcon: Icons.bar_chart_rounded,
-              label: strings.navActivity,
-            ),
-          ),
-          Expanded(
-            child: _buildNavTabSlot(
-              key: const Key('nav_tab_settings'),
-              palette: palette,
-              tabIndex: 3,
-              activeIcon: Icons.settings_rounded,
-              inactiveIcon: Icons.settings_outlined,
-              label: strings.navSettings,
-            ),
+
+          // Protruding Elevated Center Run Action extending cleanly above box border
+          Positioned(
+            top: 0,
+            bottom: 6,
+            child: _buildCenterRunActionSlot(palette, strings),
           ),
         ],
       ),
@@ -800,8 +875,8 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
     );
   }
 
-  /// Elevated center Sonic Coral circle with official vector icon and small
-  /// "Run" / "Lari" label underneath per `stradio-reference-3-navigation.png`.
+  /// Elevated center Sonic Coral circle protruding cleanly above the Floating
+  /// Island top edge with official vector icon and "Run" / "Lari" label below.
   Widget _buildCenterRunActionSlot(
     StradioPalette palette,
     StradioStrings strings,
@@ -813,33 +888,36 @@ class _RootNavigationShellState extends State<RootNavigationShell> {
         key: const Key('nav_center_run_button'),
         behavior: HitTestBehavior.opaque,
         onTap: _handleCenterRunButtonTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64, minWidth: 56),
+        child: SizedBox(
+          width: 72,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 54,
+                height: 54,
                 decoration: BoxDecoration(
                   color: StradioColors.sonicCoral,
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: palette.canvas.withValues(alpha: 0.9),
+                    width: 3,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: StradioColors.sonicCoral.withValues(alpha: 0.34),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
+                      color: StradioColors.sonicCoral.withValues(alpha: 0.36),
+                      blurRadius: 16,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
                 child: const Icon(
                   Icons.directions_run_rounded,
-                  size: 24,
+                  size: 26,
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 4),
               Text(
                 strings.navRun,
                 maxLines: 1,

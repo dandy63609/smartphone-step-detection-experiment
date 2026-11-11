@@ -71,6 +71,7 @@ abstract class StradioStrings {
 
   // --- Home Screen ---
   String get homeGreetingPrefix;
+  String homeTimeGreeting(int hour);
   String get homeDailyGoalTitle;
   String get homeOpenGoalBadge;
   String homeStepsOfTarget(String current, String target);
@@ -106,12 +107,26 @@ abstract class StradioStrings {
 
   // --- Activity Journal ---
   String get activityWeeklyTitle;
+  String get activityRangeWeek;
+  String get activityRangeMonth;
+  String get activityRangeQuarter;
+  String get activityRangeAll;
+  String get activityChartBarLabel;
+  String get activityChartLineLabel;
+  String get activityChartSplitLabel;
+  String get activityTooltipGoalLabel;
   String get activityFilterAll;
   String get activityFilterWalking;
   String get activityFilterJogging;
   String activitySessionsCount(int count);
   String get activityEmptyFilterBody;
   String get activityStartFirstRunAction;
+
+  // --- Active Run & Soundscape Picker ---
+  String get tempoPickerTitle;
+  String get tempoPickerSubtitle;
+  String get placementHandLabel;
+  String get placementPocketLabel;
 
   // --- Settings & Profile ---
   String get settingsProfileSectionTitle;

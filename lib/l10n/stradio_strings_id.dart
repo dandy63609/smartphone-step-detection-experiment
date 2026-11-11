@@ -71,6 +71,14 @@ class StradioStringsId extends StradioStrings {
   @override
   String get homeGreetingPrefix => 'Halo lagi,';
   @override
+  String homeTimeGreeting(int hour) {
+    if (hour >= 5 && hour < 12) return 'Selamat pagi,';
+    if (hour >= 12 && hour < 17) return 'Selamat siang,';
+    if (hour >= 17 && hour < 21) return 'Selamat sore,';
+    return 'Lari malam,';
+  }
+
+  @override
   String get homeDailyGoalTitle => 'Progres Hari Ini';
   @override
   String get homeOpenGoalBadge => 'Mode Bebas Hari Ini';
@@ -143,7 +151,23 @@ class StradioStringsId extends StradioStrings {
 
   // --- Activity Journal ---
   @override
-  String get activityWeeklyTitle => '7 Hari Terakhir';
+  String get activityWeeklyTitle => 'Tren Langkah';
+  @override
+  String get activityRangeWeek => '1Mgg';
+  @override
+  String get activityRangeMonth => '1Bln';
+  @override
+  String get activityRangeQuarter => '3Bln';
+  @override
+  String get activityRangeAll => 'Semua';
+  @override
+  String get activityChartBarLabel => 'Batang';
+  @override
+  String get activityChartLineLabel => 'Garis';
+  @override
+  String get activityChartSplitLabel => 'Aktivitas';
+  @override
+  String get activityTooltipGoalLabel => 'Target harian';
   @override
   String get activityFilterAll => 'Semua';
   @override
@@ -157,6 +181,17 @@ class StradioStringsId extends StradioStrings {
       'Belum ada sesi untuk filter aktivitas ini.';
   @override
   String get activityStartFirstRunAction => 'Mulai Lari Pertama';
+
+  // --- Active Run & Soundscape Picker ---
+  @override
+  String get tempoPickerTitle => 'Pilih Tempo Lari';
+  @override
+  String get tempoPickerSubtitle =>
+      'Pilih tema BPM target untuk diselaraskan dengan langkahmu.';
+  @override
+  String get placementHandLabel => 'Tangan';
+  @override
+  String get placementPocketLabel => 'Saku';
 
   // --- Settings & Profile ---
   @override
