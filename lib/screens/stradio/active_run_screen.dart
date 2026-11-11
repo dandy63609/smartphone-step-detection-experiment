@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../algorithms/step_detector.dart';
 import '../../evaluation/run_metrics_calculator.dart';
+import '../../l10n/stradio_strings.dart';
 import '../../models/experiment_models.dart';
 import '../../services/export_service.dart';
 import '../../services/foreground_notification_service.dart';
@@ -16,6 +18,7 @@ import '../../services/recording_repository.dart';
 import '../../services/recording_service.dart';
 import '../../theme/stradio_theme.dart';
 import 'post_run_summary_screen.dart';
+import 'root_navigation_shell.dart';
 import 'sensor_labs_sheet.dart';
 
 enum _RunStreamState { connecting, running, paused, sensorError }
@@ -935,6 +938,212 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
     }
   }
 
+  void _togglePlacement() {
+    final nextPlacement = _labSettings.phonePlacement == PhonePlacement.pocket
+        ? PhonePlacement.hand
+        : PhonePlacement.pocket;
+    final nextDetail = nextPlacement == PhonePlacement.pocket
+        ? 'Front pocket'
+        : 'Right hand';
+    setState(() {
+      _labSettings = _labSettings.copyWith(
+        phonePlacement: nextPlacement,
+        placementDetail: nextDetail,
+      );
+    });
+    unawaited(StradioPreferencesService.saveLabSettings(_labSettings));
+  }
+
+  Future<void> _showTempoPickerSheet() async {
+    final palette = StradioPalette.of(context);
+    final profile = StradioPreferencesService.loadUserProfile();
+    final strings = StradioStrings.of(profile.language);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(StradioRadii.hero),
+              boxShadow: palette.cardShadow,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(StradioRadii.hero),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  key: const Key('tempo_picker_sheet'),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: palette.surface.withValues(
+                      alpha: palette.isDark ? 0.86 : 0.90,
+                    ),
+                    borderRadius: BorderRadius.circular(StradioRadii.hero),
+                    border: Border.all(
+                      color: Colors.white.withValues(
+                        alpha: palette.isDark ? 0.08 : 0.55,
+                      ),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: palette.textMuted.withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(
+                                StradioRadii.pill,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          strings.tempoPickerTitle,
+                          style: StradioTypography.soraHeading(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: palette.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          strings.tempoPickerSubtitle,
+                          style: StradioTypography.interBody(
+                            fontSize: 13,
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        for (final theme
+                            in StradioSoundscapeTheme.catalog) ...[
+                          _buildTempoOptionTile(
+                            sheetContext: sheetContext,
+                            palette: palette,
+                            theme: theme,
+                            isSelected: _labSettings.targetBpm == theme.bpm,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTempoOptionTile({
+    required BuildContext sheetContext,
+    required StradioPalette palette,
+    required StradioSoundscapeTheme theme,
+    required bool isSelected,
+  }) {
+    final accent = switch (theme.category) {
+      'chill' => StradioColors.statusLive,
+      'fast' => palette.accentCoral,
+      _ => palette.accentViolet,
+    };
+
+    return Material(
+      color: isSelected
+          ? palette.accentCoral.withValues(alpha: 0.14)
+          : palette.surfaceSubtle,
+      borderRadius: BorderRadius.circular(StradioRadii.card),
+      child: InkWell(
+        key: Key('tempo_option_${theme.bpm}'),
+        borderRadius: BorderRadius.circular(StradioRadii.card),
+        onTap: () {
+          Navigator.of(sheetContext).pop();
+          _updateTargetBpm(theme.bpm);
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(StradioRadii.control),
+                  ),
+                  child: Icon(theme.icon, size: 20, color: accent),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        theme.title,
+                        style: StradioTypography.soraHeading(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: palette.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        theme.cadenceRangeLabel,
+                        style: StradioTypography.interBody(
+                          fontSize: 12,
+                          color: palette.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected ? palette.accentCoral : palette.surface,
+                    borderRadius: BorderRadius.circular(StradioRadii.pill),
+                  ),
+                  child: Text(
+                    '${theme.bpm} BPM',
+                    style: StradioTypography.interLabel(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : accent,
+                    ),
+                  ),
+                ),
+                if (isSelected) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.check_circle_rounded,
+                    size: 20,
+                    color: palette.accentCoral,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Computes target heights for the 28 vertical equalizer bars directly from
   /// recent magnitude samples with zero intermediate list allocation, letting
   /// `_waveformTicker` interpolate them at smooth 60 FPS inside a RepaintBoundary.
@@ -1024,10 +1233,41 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
         DateTime.now().difference(_lastStepFlashAt!) <
             const Duration(milliseconds: 240);
 
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    final isRunning = _streamState == _RunStreamState.running;
+
     return Scaffold(
       backgroundColor: palette.canvas,
-      body: SafeArea(
-        child: LayoutBuilder(
+      body: Stack(
+        children: [
+          // Calm ambient wash gently shifting hue between Standby & Running
+          Positioned(
+            top: -120,
+            left: -80,
+            right: -80,
+            height: 360,
+            child: IgnorePointer(
+              child: AnimatedContainer(
+                duration: disableAnimations
+                    ? Duration.zero
+                    : const Duration(milliseconds: 450),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topCenter,
+                    radius: 0.95,
+                    colors: [
+                      (isRunning ? palette.accentCoral : palette.accentViolet)
+                          .withValues(alpha: palette.isDark ? 0.13 : 0.09),
+                      palette.canvas.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: LayoutBuilder(
           builder: (context, constraints) {
             final isWide = constraints.maxWidth >= 900;
             final isTablet = constraints.maxWidth >= 600;
@@ -1077,10 +1317,12 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
                               targetBpm: _labSettings.targetBpm,
                               algorithmCode: _primaryVariant.code,
                               soundscapeTitle: _soundscapeTitle,
+                              phonePlacement: _labSettings.phonePlacement,
                               showAlgorithmBadge:
                                   !widget.isConsumerMode ||
                                   widget.developerModeEnabled,
-                              onSelectBpm: _updateTargetBpm,
+                              onOpenTempoPicker: _showTempoPickerSheet,
+                              onTogglePlacement: _togglePlacement,
                             ),
                             SizedBox(height: isCompactHeight ? 10 : 14),
 
@@ -1175,7 +1417,9 @@ class _ActiveRunScreenState extends State<ActiveRunScreen>
           },
         ),
       ),
-    );
+    ],
+  ),
+);
   }
 }
 
@@ -1336,31 +1580,37 @@ class _EditorialRunHeader extends StatelessWidget {
   const _EditorialRunHeader({
     required this.targetBpm,
     required this.algorithmCode,
+    required this.phonePlacement,
     this.soundscapeTitle = 'Neon Stride',
     this.showAlgorithmBadge = true,
-    required this.onSelectBpm,
+    required this.onOpenTempoPicker,
+    required this.onTogglePlacement,
   });
 
   final int targetBpm;
   final String algorithmCode;
+  final PhonePlacement phonePlacement;
   final String soundscapeTitle;
   final bool showAlgorithmBadge;
-  final ValueChanged<int> onSelectBpm;
+  final VoidCallback onOpenTempoPicker;
+  final VoidCallback onTogglePlacement;
 
   @override
   Widget build(BuildContext context) {
     final palette = StradioPalette.of(context);
+    final language = StradioPreferencesService.loadUserProfile().language;
+    final strings = StradioStrings.of(language);
+    final isPocket = phonePlacement == PhonePlacement.pocket;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Editorial two-tone headline inspired by Reference 1 & 2
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: RichText(
                 text: TextSpan(
                   style: StradioTypography.soraHeading(
                     fontSize: 24,
@@ -1377,101 +1627,137 @@ class _EditorialRunHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Flexible(
-                    child: Text(
-                      '$soundscapeTitle · Adaptive Stride',
-                      key: const Key('soundscape_title_text'),
-                      overflow: TextOverflow.ellipsis,
-                      style: StradioTypography.interLabel(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textSecondary,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
+            ),
+            const SizedBox(width: 8),
+
+            // Custom Frosted Tempo & Soundscape Picker Trigger Pill
+            Material(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(StradioRadii.pill),
+              child: InkWell(
+                key: const Key('tempo_bpm_selector_button'),
+                borderRadius: BorderRadius.circular(StradioRadii.pill),
+                onTap: onOpenTempoPicker,
+                child: Container(
+                  key: const Key('utility_bpm_selector_button'),
+                  constraints: const BoxConstraints(minHeight: 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
                   ),
-                  if (showAlgorithmBadge) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(StradioRadii.pill),
+                    boxShadow: palette.cardShadow,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.graphic_eq_rounded,
+                        size: 16,
+                        color: palette.accentViolet,
                       ),
-                      decoration: BoxDecoration(
-                        color: palette.surfaceSubtle,
-                        borderRadius: BorderRadius.circular(StradioRadii.pill),
-                      ),
-                      child: Text(
-                        '$algorithmCode Midpoint',
+                      const SizedBox(width: 6),
+                      Text(
+                        '$targetBpm BPM',
                         style: StradioTypography.interLabel(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: palette.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: palette.textPrimary,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 16,
+                        color: palette.textSecondary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            Text(
+              '$soundscapeTitle · Adaptive Stride',
+              key: const Key('soundscape_title_text'),
+              overflow: TextOverflow.ellipsis,
+              style: StradioTypography.interLabel(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: palette.textSecondary,
+                letterSpacing: 0.2,
+              ),
+            ),
+            // Optional Lightweight Hand / Pocket Placement Pill
+            Material(
+              color: palette.surfaceSubtle,
+              borderRadius: BorderRadius.circular(StradioRadii.pill),
+              child: InkWell(
+                key: const Key('utility_placement_selector_button'),
+                borderRadius: BorderRadius.circular(StradioRadii.pill),
+                onTap: onTogglePlacement,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isPocket
+                            ? Icons.smartphone_rounded
+                            : Icons.pan_tool_alt_rounded,
+                        size: 13,
+                        color: palette.accentCoral,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        isPocket
+                            ? strings.placementPocketLabel
+                            : strings.placementHandLabel,
+                        style: StradioTypography.interLabel(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: palette.textPrimary,
                           letterSpacing: 0.2,
                         ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // Compact Stadium Tempo BPM Selector
-        PopupMenuButton<int>(
-          key: const Key('tempo_bpm_selector_button'),
-          tooltip: 'Select Target Tempo BPM',
-          onSelected: onSelectBpm,
-          color: palette.surface,
-          elevation: 4,
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 110, child: Text('110 BPM (Chill Walk)')),
-            PopupMenuItem(value: 118, child: Text('118 BPM (Brisk Walk)')),
-            PopupMenuItem(value: 145, child: Text('145 BPM (Tempo Jog)')),
-            PopupMenuItem(value: 165, child: Text('165 BPM (Neon Stride)')),
-            PopupMenuItem(value: 180, child: Text('180 BPM (Sprint Surge)')),
-          ],
-          child: Container(
-            key: const Key('utility_bpm_selector_button'),
-            constraints: const BoxConstraints(minHeight: 38),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: palette.surface,
-              borderRadius: BorderRadius.circular(StradioRadii.pill),
-              boxShadow: palette.cardShadow,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.graphic_eq_rounded,
-                  size: 15,
-                  color: palette.accentViolet,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '$targetBpm BPM',
-                  style: StradioTypography.interLabel(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: palette.textPrimary,
-                    letterSpacing: 0.3,
+                    ],
                   ),
                 ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 15,
-                  color: palette.textSecondary,
-                ),
-              ],
+              ),
             ),
-          ),
+            if (showAlgorithmBadge)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: palette.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(StradioRadii.pill),
+                ),
+                child: Text(
+                  '$algorithmCode Midpoint',
+                  style: StradioTypography.interLabel(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: palette.textSecondary,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+          ],
         ),
       ],
     );

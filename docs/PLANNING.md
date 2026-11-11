@@ -220,7 +220,7 @@ Aplikasi dibungkus oleh **Root Shell Navigation** menggunakan bilah navigasi mel
 
 ---
 
-## 5. Roadmap Eksekusi (6 Milestone) `[STATUS: DONE (M1-M6 SELESAI)]`
+## 5. Roadmap Eksekusi (7 Milestone) `[STATUS: DONE (M1-M7 SELESAI)]`
 
 1. **Milestone 1 (SELESAI - Commit `9153502`):** Revamp UI `ActiveRunScreen` (`lib/screens/stradio/active_run_screen.dart`).
    - Hero Waveform Card dengan tombol Play melayang di tengah saat standby, Segmented Utility Pills (BPM, Placement, Algorithm), angka langkah Sora 68px, target langkah, dan secondary metrics card.
@@ -234,10 +234,12 @@ Aplikasi dibungkus oleh **Root Shell Navigation** menggunakan bilah navigasi mel
    - Ekstraksi dan pengayaan katalog tema bergaya aplikasi musik (`lib/screens/stradio/library_screen.dart`: *Chill Walk 110*, *Lo-Fi Pace 118*, *Tempo Jog 145*, *Neon Stride 165*, *Sprint Surge 180*) dengan Active Soundscape Hero Card (`28px` Pebble, tombol 1-tap `Run This Tempo` + tombol pemilih target sesi `Pre-Run Goal Selector Sheet`), filter chips (`All`, `Chill`, `Jog`, `Fast`, `Favorites`), honest empty favorites state, inline contextual audio preview notice langsung di bawah kartu yang di-preview, serta sinkronisasi judul soundscape dan 5 opsi BPM ke `ActiveRunScreen`.
 6. **Milestone 6 (SELESAI - Tahap 6A & 6B):** `ActivityScreen`, `SettingsScreen`, `Hidden Developer Mode` & Pembersihan Mode Konsumen.
    - Pengayaan jurnal riwayat `Activity` (`lib/screens/stradio/activity_screen.dart`) dengan grafik tren 7 hari reaktif yang mengikuti filter aktivitas (`All`/`Walking`/`Jogging`) serta pengurutan kronologis terbaru di atas, `SettingsScreen` dwibahasa lengkap (`lib/screens/stradio/settings_screen.dart`: edit profil nama/tinggi badan/target harian, panduan baterai saku Android, clear workout history dengan dialog konfirmasi), serta panel `Developer & Research Tools` lengkap (akses langsung ke `SensorLabsSheet`, ekspor 3 CSV, dan `LegacyExperimentShell`).
+7. **Milestone 7 (SELESAI - Tahap 7A, 7B & 7C):** Consumer UX Polish, Targeted Glassmorphism & Interactive Activity Analytics.
+   - Pemisahan visual tombol tengah `Run` agar menonjol keluar dari garis atas Floating Island Nav Bar dengan efek *targeted frosted glassmorphism*, perbaikan simetri pill filter `"All"` di `ActivityScreen`, penyelarasan 1 baris *time-aware greeting* + `[Nama]` di `HomeScreen`, peningkatan diagram `ActivityScreen` (`1W` / `1M` / `3M` / `All`, opsi `Bar` / `Line-Area` / `Activity Split`, serta *tap popover* info tiap titik/batang), *Custom Frosted Tempo Picker Sheet* + toggle cepat `Hand`/`Pocket` opsional di `ActiveRunScreen`, dan mikro-animasi/ambient wash bertakar `MOTION 2`.
 
 ---
 
-## 6. Protokol Integritas Eksperimen & Performa Sistem `[STATUS: DONE - 52/52 TESTS PASSED]`
+## 6. Protokol Integritas Eksperimen & Performa Sistem `[STATUS: DONE - 53/53 TESTS PASSED]`
 
 Meskipun tampilan visual ditingkatkan menjadi produk komersial modern, seluruh **integritas riset dan metodologi ilmiah tetap terjaga 100%**:
 
@@ -328,5 +330,8 @@ Dokumen kerja operasional untuk menyelesaikan bug lifecycle, polishing brand ide
 1. **Migrasi Lokalisasi ke Standar Resmi Flutter `.arb` + `flutter_localizations` (`gen-l10n`):**
    - Saat ini (`v0.2.0`) aplikasi memakai kontrak abstrak per bahasa (`lib/l10n/stradio_strings.dart`, `stradio_strings_en.dart`, `stradio_strings_id.dart`) agar *compile-time safe* dan menjaga ukuran APK tetap ramping tanpa dependency tambahan.
    - Jika ke depannya jumlah bahasa bertambah banyak atau melibatkan penerjemah eksternal, kamus teks akan dimigrasikan ke file `.arb` bersama `flutter_localizations` dan `intl`.
+2. **Upload Musik Lokal & Mesin Sinkronisasi Audio Berbasis Klasifikasi Aktivitas Real-Time:**
+   - Memungkinkan pengguna memilih/mengunggah file audio lokal (`MP3` / `M4A` / `WAV`) dari perangkat (`file_picker` + `just_audio` + `audio_service`), memetakannya ke kategori intensitas (`Chill Walk`, `Tempo Jog`, `Fast Sprint`) dan BPM target opsional.
+   - Mengimplementasikan klasifikasi aktivitas real-time berbasis jendela `SPM` stabil (*hysteresis* 5–8 detik agar transisi musik tidak gugup akibat noise sesaat) untuk perpindahan trek (*crossfade*) dan penyesuaian tempo pemutaran halus (`setSpeed`) saat aplikasi aktif maupun berjalan di latar belakang (*screen-off / pocket*).
 
 

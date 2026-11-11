@@ -262,12 +262,23 @@ void main() {
       await tester.pump();
       expect(find.text('2'), findsOneWidget);
 
-      // Exercise Tempo BPM PopupSelector (118 BPM)
+      // Exercise Custom Frosted Tempo Picker Sheet (118 BPM) & Hand/Pocket pill
       await tester.tap(find.byKey(const Key('tempo_bpm_selector_button')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('118 BPM (Brisk Walk)'));
+      expect(find.byKey(const Key('tempo_picker_sheet')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('tempo_option_118')));
       await tester.pumpAndSettle();
+      expect(find.text('118 BPM'), findsOneWidget);
       expect(find.text('Neon Stride · Adaptive Stride'), findsOneWidget);
+
+      final placementPill = find.byKey(
+        const Key('utility_placement_selector_button'),
+      );
+      expect(placementPill, findsOneWidget);
+      expect(find.text('Hand'), findsOneWidget);
+      await tester.tap(placementPill);
+      await tester.pumpAndSettle();
+      expect(find.text('Pocket'), findsOneWidget);
 
       // Open Sensor Labs and exercise benchmark config, Mean+SD (B1) chip, PostHog sync, and empty CSV export
       await tester.tap(find.byKey(const Key('open_sensor_labs_button')));
