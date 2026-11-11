@@ -102,7 +102,7 @@ void main() {
           ),
         ]);
       final postHog = PostHogTelemetryService(
-        apiKey: 'phc_test_activity',
+        apiKey: 'phc_test',
         transport: (uri, payload) async => 200,
       );
 
@@ -198,7 +198,7 @@ void main() {
           ),
         );
       final postHog = PostHogTelemetryService(
-        apiKey: 'phc_test_settings',
+        apiKey: 'phc_test',
         transport: (uri, payload) async => 200,
       );
       StradioUserProfile? latestProfile;
@@ -347,7 +347,7 @@ void main() {
     (tester) async {
       final store = _TestRecordingStore();
       final postHog = PostHogTelemetryService(
-        apiKey: 'phc_test_m6_responsive',
+        apiKey: '',
         transport: (uri, payload) async => 200,
       );
 
